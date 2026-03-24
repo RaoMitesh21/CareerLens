@@ -1,0 +1,316 @@
+{
+  "version": 1,
+  "global": {
+    "weights": {
+      "core": 0.72,
+      "secondary": 0.2,
+      "bonus": 0.08
+    },
+    "confidence_thresholds": {
+      "core": 0.24,
+      "secondary": 0.22,
+      "bonus": 0.2
+    },
+    "core_terms": []
+  },
+  "families": {
+    "data": {
+      "weights": {
+        "core": 0.7674,
+        "secondary": 0.1675,
+        "bonus": 0.0651
+      },
+      "confidence_thresholds": {
+        "core": 0.23,
+        "secondary": 0.21,
+        "bonus": 0.2
+      },
+      "core_terms": [
+        "sql",
+        "mobile",
+        "python",
+        "services",
+        "engineer",
+        "microsoft",
+        "information",
+        "developer",
+        "analytics",
+        "position",
+        "reasoning",
+        "shell",
+        "bash",
+        "shells",
+        "reporting",
+        "cloud",
+        "javascript",
+        "insights",
+        "html",
+        "css",
+        "health",
+        "postgresql",
+        "reports",
+        "general",
+        "scientist"
+      ]
+    },
+    "backend": {
+      "weights": {
+        "core": 0.7979,
+        "secondary": 0.1455,
+        "bonus": 0.0566
+      },
+      "confidence_thresholds": {
+        "core": 0.24,
+        "secondary": 0.22,
+        "bonus": 0.2
+      },
+      "core_terms": [
+        "api",
+        "database",
+        "backend",
+        "service",
+        "microservice",
+        "sql"
+      ]
+    },
+    "frontend": {
+      "weights": {
+        "core": 0.8123,
+        "secondary": 0.1351,
+        "bonus": 0.0525
+      },
+      "confidence_thresholds": {
+        "core": 0.24,
+        "secondary": 0.22,
+        "bonus": 0.2
+      },
+      "core_terms": [
+        "sql",
+        "reasoning",
+        "services",
+        "javascript",
+        "css",
+        "html",
+        "microsoft",
+        "python",
+        "postgresql",
+        "typescript",
+        "web",
+        "cloud",
+        "shells",
+        "bash",
+        "shell",
+        "react",
+        "purpose",
+        "general",
+        "mysql",
+        "google",
+        "research",
+        "php",
+        "azure",
+        "asp.net",
+        "powershell"
+      ]
+    },
+    "ai_ml": {
+      "weights": {
+        "core": 0.782,
+        "secondary": 0.1569,
+        "bonus": 0.061
+      },
+      "confidence_thresholds": {
+        "core": 0.23,
+        "secondary": 0.21,
+        "bonus": 0.2
+      },
+      "core_terms": [
+        "engineer",
+        "reasoning",
+        "python",
+        "sql",
+        "physical",
+        "services",
+        "cloud",
+        "purpose",
+        "postgresql",
+        "shells",
+        "bash",
+        "shell",
+        "general",
+        "microsoft",
+        "javascript",
+        "web",
+        "css",
+        "html",
+        "meta",
+        "google",
+        "mysql",
+        "developer",
+        "pro",
+        "typescript",
+        "c"
+      ]
+    },
+    "devops": {
+      "weights": {
+        "core": 0.82,
+        "secondary": 0.1296,
+        "bonus": 0.0504
+      },
+      "confidence_thresholds": {
+        "core": 0.24,
+        "secondary": 0.22,
+        "bonus": 0.2
+      },
+      "core_terms": [
+        "engineer",
+        "devops",
+        "cloud",
+        "services",
+        "shells",
+        "bash",
+        "shell",
+        "python",
+        "sql",
+        "postgresql",
+        "infrastructure",
+        "web",
+        "ansible",
+        "microsoft",
+        "javascript",
+        "css",
+        "html",
+        "reasoning",
+        "make",
+        "mysql",
+        "typescript",
+        "azure",
+        "powershell",
+        "google",
+        "java"
+      ]
+    },
+    "security": {
+      "weights": {
+        "core": 0.8007,
+        "secondary": 0.1435,
+        "bonus": 0.0558
+      },
+      "confidence_thresholds": {
+        "core": 0.25,
+        "secondary": 0.22,
+        "bonus": 0.2
+      },
+      "core_terms": [
+        "cybersecurity",
+        "services",
+        "python",
+        "sql",
+        "bash",
+        "shells",
+        "shell",
+        "microsoft",
+        "javascript",
+        "powershell",
+        "css",
+        "html",
+        "web",
+        "cloud",
+        "postgresql",
+        "mysql",
+        "reasoning",
+        "rust",
+        "make",
+        "java",
+        "c",
+        "assembly",
+        "php",
+        "ansible",
+        "azure"
+      ]
+    },
+    "product": {
+      "weights": {
+        "core": 0.7898,
+        "secondary": 0.1513,
+        "bonus": 0.0588
+      },
+      "confidence_thresholds": {
+        "core": 0.23,
+        "secondary": 0.21,
+        "bonus": 0.2
+      },
+      "core_terms": [
+        "sql",
+        "product",
+        "microsoft",
+        "javascript",
+        "python",
+        "services",
+        "css",
+        "html",
+        "reasoning",
+        "shells",
+        "bash",
+        "shell",
+        "cloud",
+        "postgresql",
+        "azure",
+        "mysql",
+        "server",
+        "web",
+        "purpose",
+        "typescript",
+        "google",
+        "general",
+        "powershell",
+        "java",
+        "asp.net"
+      ]
+    },
+    "general": {
+      "weights": {
+        "core": 0.7742,
+        "secondary": 0.1626,
+        "bonus": 0.0632
+      },
+      "confidence_thresholds": {
+        "core": 0.24,
+        "secondary": 0.22,
+        "bonus": 0.2
+      },
+      "core_terms": [
+        "developer",
+        "sql",
+        "javascript",
+        "html",
+        "css",
+        "microsoft",
+        "services",
+        "company",
+        "python",
+        "shell",
+        "bash",
+        "shells",
+        "typescript",
+        "postgresql",
+        "name",
+        "reasoning",
+        "react",
+        "web",
+        "mysql",
+        "sales",
+        "general",
+        "java",
+        "customer",
+        "server",
+        "asp.net"
+      ]
+    }
+  },
+  "generated_from": {
+    "data_csv": "/Users/miteshrao/Desktop/Capstone Project/Datasets/data.csv",
+    "resume_csv": "/Users/miteshrao/Desktop/Capstone Project/Datasets/Resume.csv",
+    "stack_overflow_csv": "/Users/miteshrao/Desktop/Capstone Project/Datasets/stack-overflow-developer-survey-2025/survey_results_public.csv"
+  }
+}

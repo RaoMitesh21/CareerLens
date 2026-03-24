@@ -1,0 +1,469 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════════════
+   CareerLens — Brand Design System
+   ───────────────────────────────────────────────────────────────────
+   Deep Gunmetal  #232B32  — dark anchor / ink / headings
+   Electric Cyan  #00C2CB  — accent / CTA / highlights
+   White          #FFFFFF  — background canvas
+   Light → Dark palette: white surfaces → gunmetal depth
+   ═══════════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ── Brand Core ─────────────────────────────────── */
+  --color-brand-gunmetal: #232B32;
+  --color-brand-cyan: #00C2CB;
+  --color-brand-white: #FFFFFF;
+
+  /* ── Background Surfaces (light → dark) ─────────── */
+  --color-base: #F8FAFB;
+  --color-surface: #FFFFFF;
+  --color-surface-alt: #EEF1F4;
+  --color-surface-dark: #232B32;
+  --color-glass: rgba(255, 255, 255, 0.60);
+  --color-glass-border: rgba(35, 43, 50, 0.08);
+
+  /* ── Primary = Electric Cyan ────────────────────── */
+  --color-primary: #00C2CB;
+  --color-primary-dark: #00A8B0;
+  --color-primary-light: #5FDCE3;
+  --color-primary-glow: rgba(0, 194, 203, 0.20);
+  --color-primary-subtle: rgba(0, 194, 203, 0.08);
+
+  /* ── Status Colors ──────────────────────────────── */
+  --color-success: #22c55e;
+  --color-success-light: #86efac;
+  --color-success-glow: rgba(34, 197, 94, 0.18);
+
+  --color-danger: #ef4444;
+  --color-danger-light: #fca5a5;
+
+  --color-warning: #f59e0b;
+
+  /* ── Ink / Text (gunmetal spectrum) ─────────────── */
+  --color-ink: #232B32;
+  --color-ink-secondary: #4A545E;
+  --color-ink-muted: #8E99A4;
+
+  /* ── Fonts ──────────────────────────────────────── */
+  --font-display: "General Sans", "Cabinet Grotesk", system-ui, sans-serif;
+  --font-body: "Sora", "Inter", system-ui, sans-serif;
+
+  /* ── Spacing ────────────────────────────────────── */
+  --spacing-section: 6rem;
+
+  /* ── Radius ─────────────────────────────────────── */
+  --radius-card: 1.25rem;
+  --radius-button: 0.75rem;
+  --radius-pill: 9999px;
+
+  /* ── Shadows (gunmetal-tinted) ──────────────────── */
+  --shadow-card: 0 4px 32px rgba(35, 43, 50, 0.06), 0 1px 4px rgba(35, 43, 50, 0.04);
+  --shadow-card-hover: 0 8px 48px rgba(35, 43, 50, 0.10), 0 2px 8px rgba(35, 43, 50, 0.06);
+  --shadow-glow: 0 0 60px var(--color-primary-glow);
+  --shadow-cyan: 0 4px 24px rgba(0, 194, 203, 0.25);
+
+  /* ── 3D Depth & Layering ────────────────────────── */
+  --shadow-3d: 0 20px 40px -10px rgba(0,0,0,0.08), 0 8px 16px -4px rgba(0,0,0,0.04);
+  --shadow-3d-hover: 0 28px 50px -12px rgba(0,194,203,0.12), 0 12px 24px -6px rgba(0,0,0,0.06);
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.03);
+  --shadow-btn-3d: 0 2px 0 rgba(0,0,0,0.04), 0 4px 14px rgba(0,194,203,0.35), inset 0 1px 0 rgba(255,255,255,0.3);
+  --shadow-btn-3d-hover: 0 2px 0 rgba(0,0,0,0.04), 0 6px 20px rgba(0,194,203,0.4), inset 0 1px 0 rgba(255,255,255,0.4);
+  --shadow-btn-3d-active: 0 0 0 rgba(0,0,0,0.04), 0 2px 4px rgba(0,194,203,0.2), inset 0 2px 4px rgba(0,0,0,0.08);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Global Styles
+   ═══════════════════════════════════════════════════════════════════ */
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: var(--color-base);
+    color: var(--color-ink);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: var(--color-brand-cyan);
+    color: var(--color-brand-white);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Components
+   ═══════════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* ── Premium Glass Panel (3D Light) ─────────────── */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: var(--radius-card);
+    box-shadow:
+      var(--shadow-3d),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      inset 0 0 20px rgba(255, 255, 255, 0.3);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ── 3D Glass Card (Hover-interactive) ──────────── */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: var(--radius-card);
+    box-shadow:
+      0 4px 6px -1px rgba(0,0,0,0.03),
+      0 12px 24px -8px rgba(0,0,0,0.06),
+      inset 0 1px 0 rgba(255,255,255,1);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-card:hover {
+    box-shadow:
+      0 8px 12px -2px rgba(0,194,203,0.05),
+      0 24px 48px -12px rgba(0,194,203,0.1),
+      inset 0 1px 0 rgba(255,255,255,1);
+    border-color: rgba(255, 255, 255, 0.8);
+    transform: translateY(-3px);
+  }
+
+  /* ── 3D Primary Button (Cyan with depth) ────────── */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2rem;
+    background: linear-gradient(180deg, #00d4dd 0%, #00aeb6 100%);
+    color: var(--color-brand-white);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    border: none;
+    border-radius: var(--radius-button);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-btn-3d);
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(180deg, #05e0ea 0%, #00b9c3 100%);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-btn-3d-hover);
+  }
+
+  .btn-primary:active {
+    transform: translateY(1px);
+    box-shadow: var(--shadow-btn-3d-active);
+  }
+
+  /* ── 3D Secondary Button (White glass outline) ──── */
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2rem;
+    background: rgba(255, 255, 255, 0.85);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    border: 1px solid rgba(35, 43, 50, 0.12);
+    border-radius: var(--radius-button);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.02),
+      0 1px 0 rgba(0, 0, 0, 0.02);
+  }
+
+  .btn-secondary:hover {
+    background: #ffffff;
+    color: var(--color-ink);
+    border-color: rgba(35, 43, 50, 0.2);
+    transform: translateY(-2px);
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.06),
+      0 1px 0 rgba(0, 0, 0, 0.02);
+  }
+
+  .btn-secondary:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-inner);
+  }
+
+  /* ── Dark Button (Gunmetal fill) ─────────────────── */
+  .btn-dark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2rem;
+    background: var(--color-brand-gunmetal);
+    color: var(--color-brand-white);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    border: none;
+    border-radius: var(--radius-button);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+  }
+
+  .btn-dark:hover {
+    background: #1a2027;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(35, 43, 50, 0.25);
+  }
+
+  /* ── Skill Tags ──────────────────────────────────── */
+  .tag-matched {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    background: var(--color-primary-subtle);
+    color: var(--color-primary-dark);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(0, 194, 203, 0.20);
+  }
+
+  .tag-missing {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    background: transparent;
+    color: var(--color-danger);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--color-danger-light);
+  }
+
+  /* ── Section Container ───────────────────────────── */
+  .section-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  /* ── Noise Overlay (Subtle grain) ────────────────── */
+  .noise-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.022;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+  }
+
+  /* ── 3D Form Input ──────────────────────────────── */
+  .input-3d {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border-radius: var(--radius-button);
+    border: 1px solid rgba(203, 213, 225, 0.5);
+    background: rgba(255, 255, 255, 0.95);
+    color: #1e293b;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    box-shadow: var(--shadow-inner);
+  }
+  .input-3d::placeholder {
+    color: rgba(148, 163, 184, 0.7);
+    font-weight: 400;
+  }
+  .input-3d:focus {
+    border-color: rgba(0, 194, 203, 0.6);
+    background: #ffffff;
+    box-shadow:
+      var(--shadow-inner),
+      0 0 0 4px rgba(0, 194, 203, 0.12);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     AUTH PAGES — Premium 3D Light Design System
+     ═══════════════════════════════════════════════════════════════ */
+
+  /* ── Glassmorphic Auth Card (Light) ───────────────── */
+  .auth-glass-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 1);
+    border-radius: 1.5rem;
+    box-shadow:
+      0 30px 60px rgba(0, 194, 203, 0.08),
+      0 10px 20px rgba(15, 23, 42, 0.04),
+      0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .auth-glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(0, 194, 203, 0.8),
+      rgba(14, 165, 233, 0.6),
+      transparent
+    );
+  }
+
+  /* ── Orbital Ring Animations ───────────────────────── */
+  .auth-orbit-ring {
+    position: absolute;
+    border-radius: 50%;
+    animation: auth-orbit 40s linear infinite;
+  }
+
+  .auth-orbit-ring-2 {
+    position: absolute;
+    border-radius: 50%;
+    animation: auth-orbit 55s linear infinite reverse;
+  }
+
+  /* ── Auth Input (Light) ───────────────────────────── */
+  .auth-input {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(203, 213, 225, 0.6);
+    background: rgba(255, 255, 255, 0.9);
+    color: #1e293b; /* Slate 800 */
+    font-size: 0.9375rem;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    box-shadow: 0 2px 5px rgba(15, 23, 42, 0.02) inset;
+  }
+
+  .auth-input::placeholder {
+    color: rgba(148, 163, 184, 0.8);
+    font-weight: 400;
+  }
+
+  .auth-input:focus {
+    border-color: rgba(0, 194, 203, 0.7);
+    background: #ffffff;
+    box-shadow:
+      0 0 0 4px rgba(0, 194, 203, 0.12),
+      0 5px 15px rgba(0, 194, 203, 0.08);
+  }
+
+  .auth-input.error {
+    border-color: rgba(239, 68, 68, 0.6);
+    background: rgba(254, 242, 242, 0.8);
+  }
+
+  .auth-input.error:focus {
+    box-shadow:
+      0 0 0 4px rgba(239, 68, 68, 0.12),
+      0 5px 15px rgba(239, 68, 68, 0.08);
+  }
+
+  /* ── Shimmer Button Effect ────────────────────────── */
+  .auth-btn-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .auth-btn-shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.25),
+      transparent
+    );
+    animation: auth-shimmer 3s ease-in-out infinite;
+  }
+
+  /* ── OTP Digit Box (Light) ────────────────────────── */
+  .auth-otp-box {
+    width: 3.5rem;
+    height: 4rem;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    border-radius: 0.75rem;
+    border: 2px solid rgba(203, 213, 225, 0.8);
+    background: #ffffff;
+    color: #0f172a;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    box-shadow: 0 4px 6px rgba(15, 23, 42, 0.03);
+  }
+
+  .auth-otp-box:focus {
+    border-color: #00C2CB;
+    background: #f0fdfa; /* Teal 50 */
+    box-shadow:
+      0 0 0 4px rgba(0, 194, 203, 0.15),
+      0 10px 25px rgba(0, 194, 203, 0.1);
+    transform: scale(1.05);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Auth Keyframe Animations
+   ═══════════════════════════════════════════════════════════════════ */
+
+@keyframes auth-orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes auth-shimmer {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: 100%; }
+}
+
+@keyframes auth-glow-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.9; }
+}
+

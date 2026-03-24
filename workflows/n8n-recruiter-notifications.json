@@ -1,0 +1,170 @@
+{
+  "name": "CareerLens - Recruiter Fit Notifications",
+  "description": "Notify recruiters when candidates meet minimum fit threshold",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [50, 300]
+    },
+    {
+      "parameters": {
+        "triggerOn": "insertion",
+        "resource": "mysql",
+        "database": "careerlens_db",
+        "tableName": "analysis_results",
+        "conditions": {
+          "condition": "fit_probability > 0.75"
+        },
+        "options": {}
+      },
+      "name": "Trigger on High-Fit Candidate",
+      "type": "n8n-nodes-base.mysqlTrigger",
+      "typeVersion": 1,
+      "position": [300, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://careerlens-backend:8000/resumes/{{ $node[\"Trigger on High-Fit Candidate\"].json[\"resume_id\"] }}",
+        "authentication": "none",
+        "method": "GET",
+        "options": {}
+      },
+      "name": "Fetch Resume Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [550, 300]
+    },
+    {
+      "parameters": {
+        "operation": "readFromTable",
+        "resource": "mysql",
+        "database": "careerlens_db",
+        "tableName": "recruiter_subscriptions",
+        "where": {
+          "conditions": [
+            {
+              "column": "job_role",
+              "condition": "equals",
+              "value": "={{ $node[\"Trigger on High-Fit Candidate\"].json[\"target_role\"] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Find Subscribed Recruiters",
+      "type": "n8n-nodes-base.mysql",
+      "typeVersion": 1,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "to": "={{ $node[\"Find Subscribed Recruiters\"].json[0][\"email\"] }}",
+        "subject": "🎯 High-Fit Candidate Alert: {{ $node[\"Fetch Resume Details\"].json[\"candidate_name\"] }}",
+        "htmlBody": "<html><body><h2>New High-Fit Candidate</h2><p>Fit Score: {{ $node[\"Trigger on High-Fit Candidate\"].json[\"fit_probability\"] * 100 }}%</p><p>Position: {{ $node[\"Trigger on High-Fit Candidate\"].json[\"target_role\"] }}</p></body></html>",
+        "options": {}
+      },
+      "name": "Send Email Notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "resource": "mysql",
+        "database": "careerlens_db",
+        "tableName": "notifications",
+        "columns": {
+          "columns": [
+            {
+              "column": "recruiter_id",
+              "value": "={{ $node[\"Find Subscribed Recruiters\"].json[0][\"id\"] }}"
+            },
+            {
+              "column": "candidate_id",
+              "value": "={{ $node[\"Fetch Resume Details\"].json[\"id\"] }}"
+            },
+            {
+              "column": "fit_score",
+              "value": "={{ $node[\"Trigger on High-Fit Candidate\"].json[\"fit_probability\"] }}"
+            },
+            {
+              "column": "sent_at",
+              "value": "NOW()"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Log Notification",
+      "type": "n8n-nodes-base.mysql",
+      "typeVersion": 1,
+      "position": [1300, 300]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Trigger on High-Fit Candidate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger on High-Fit Candidate": {
+      "main": [
+        [
+          {
+            "node": "Fetch Resume Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Resume Details": {
+      "main": [
+        [
+          {
+            "node": "Find Subscribed Recruiters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Subscribed Recruiters": {
+      "main": [
+        [
+          {
+            "node": "Send Email Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email Notification": {
+      "main": [
+        [
+          {
+            "node": "Log Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "America/New_York"
+  },
+  "tags": ["careerlens", "notifications", "recruiters"]
+}

@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: careerlens-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-careerlens_root}
+      MYSQL_DATABASE: careerlens_db
+      MYSQL_USER: careerlens_user
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-careerlens_pass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    networks:
+      - careerlens-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./careerlens-backend
+      dockerfile: Dockerfile
+    container_name: careerlens-backend
+    environment:
+      DATABASE_URL: mysql+pymysql://careerlens_user:${MYSQL_PASSWORD:-careerlens_pass}@mysql:3306/careerlens_db
+      PYTHON_ENV: ${PYTHON_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./careerlens-backend/app:/app/app
+      - ./ml_models:/app/ml_models
+    networks:
+      - careerlens-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend
+  frontend:
+    build:
+      context: ./careerlens-frontend
+      dockerfile: Dockerfile
+    container_name: careerlens-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    depends_on:
+      - backend
+    networks:
+      - careerlens-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # n8n Workflow Automation (Optional)
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: careerlens-n8n
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-careerlens123}
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - DB_TYPE=mysql
+      - DB_MYSQLDB_HOST=mysql
+      - DB_MYSQLDB_USER=careerlens_user
+      - DB_MYSQLDB_PASSWORD=${MYSQL_PASSWORD:-careerlens_pass}
+      - DB_MYSQLDB_DATABASE=n8n_db
+    ports:
+      - "5678:5678"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/home/node/.n8n/workflows
+    networks:
+      - careerlens-network
+    profiles:
+      - workflows
+
+volumes:
+  mysql_data:
+    driver: local
+  n8n_data:
+    driver: local
+
+networks:
+  careerlens-network:
+    driver: bridge

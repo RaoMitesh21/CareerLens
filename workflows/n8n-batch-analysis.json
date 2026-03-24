@@ -1,0 +1,185 @@
+{
+  "name": "CareerLens - Batch Resume Analysis",
+  "description": "Automated batch processing of resumes through CareerLens API for ML fit scoring",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [50, 300]
+    },
+    {
+      "parameters": {
+        "operation": "readFromTable",
+        "resource": "mysql",
+        "database": "careerlens_db",
+        "tableName": "resumes",
+        "returnAll": true,
+        "options": {}
+      },
+      "name": "Fetch Pending Resumes",
+      "type": "n8n-nodes-base.mysql",
+      "typeVersion": 1,
+      "position": [300, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://careerlens-backend:8000/analyze/hybrid",
+        "authentication": "none",
+        "method": "POST",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "resume_text",
+              "value": "={{ $node[\"Fetch Pending Resumes\"].json[\"extracted_text\"] }}"
+            },
+            {
+              "name": "target_role",
+              "value": "={{ $node[\"Fetch Pending Resumes\"].json[\"target_role\"] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Run Hybrid Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [550, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://careerlens-backend:8000/ml-fit/score",
+        "authentication": "none",
+        "method": "POST",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "analysis_result",
+              "value": "={{ $node[\"Run Hybrid Analysis\"].json }}"
+            },
+            {
+              "name": "candidate_id",
+              "value": "={{ $node[\"Fetch Pending Resumes\"].json[\"id\"] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Predict ML Fit Score",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "resource": "mysql",
+        "database": "careerlens_db",
+        "tableName": "analysis_results",
+        "updateKey": "id",
+        "columns": {
+          "columns": [
+            {
+              "column": "analysis_score",
+              "value": "={{ $node[\"Run Hybrid Analysis\"].json[\"overall_score\"] }}"
+            },
+            {
+              "column": "fit_probability",
+              "value": "={{ $node[\"Predict ML Fit Score\"].json[\"fit_probability\"] }}"
+            },
+            {
+              "column": "fit_class",
+              "value": "={{ $node[\"Predict ML Fit Score\"].json[\"fit_class\"] }}"
+            },
+            {
+              "column": "processed_at",
+              "value": "NOW()"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Save Results to Database",
+      "type": "n8n-nodes-base.mysql",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "channel": "#careerlens-notifications",
+        "text": "✅ Batch analysis complete: {{ $node[\"Fetch Pending Resumes\"].json.length }} resumes processed",
+        "options": {}
+      },
+      "name": "Send Slack Notification",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [1300, 300]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Fetch Pending Resumes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Pending Resumes": {
+      "main": [
+        [
+          {
+            "node": "Run Hybrid Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Hybrid Analysis": {
+      "main": [
+        [
+          {
+            "node": "Predict ML Fit Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Predict ML Fit Score": {
+      "main": [
+        [
+          {
+            "node": "Save Results to Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Results to Database": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "America/New_York",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "executionOrder": "v1"
+  },
+  "tags": ["careerlens", "automation", "batch-processing"]
+}
