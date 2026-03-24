@@ -18,9 +18,10 @@ DB_HOST: str = os.getenv("DB_HOST", "localhost")
 DB_PORT: str = os.getenv("DB_PORT", "3306")
 DB_NAME: str = os.getenv("DB_NAME", "careerlens")
 
-DATABASE_URL: str = (
+DEFAULT_DATABASE_URL: str = (
     f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 )
+DATABASE_URL: str = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
 
 
 # ── Application ─────────────────────────────────────────────────────
