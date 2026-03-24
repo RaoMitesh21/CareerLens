@@ -1,4 +1,4 @@
-# CareerLens
+# CareerLens: AI-Powered Skill Gap Analyzer and Recruiter Fit Platform
 
 <p align="center">
   <img src="careerlens-backend/app/static/careerlens-logo.png" alt="CareerLens Logo" width="280"/>
@@ -20,13 +20,29 @@ CareerLens is a production-ready full-stack platform that analyzes a candidate r
 
 The platform is built around a modular backend architecture, a modern React frontend, and optional workflow automation for batch operations.
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Quick Links](#quick-links)
+- [Core Capabilities](#core-capabilities)
+- [Architectural Structure](#architectural-structure)
+- [Component Structure](#component-structure)
+- [Project File Structure](#project-file-structure)
+- [Development Approach](#development-approach)
+- [Local Setup](#local-setup)
+- [API Surface (Highlights)](#api-surface-highlights)
+- [Production Readiness](#production-readiness)
+- [Security and Quality Practices](#security-and-quality-practices)
+- [Remaining Scope](#remaining-scope)
+- [Author](#author)
+- [License](#license)
+
 ## Quick Links
 
-- Full documentation: [DOCUMENTATION.md](DOCUMENTATION.md)
-- Deployment guide: [DEPLOYMENT.md](DEPLOYMENT.md)
 - Backend guide: [careerlens-backend/README.md](careerlens-backend/README.md)
 - Frontend guide: [careerlens-frontend/README.md](careerlens-frontend/README.md)
 - Workflow automation: [workflows/README.md](workflows/README.md)
+- Environment template: [.env.example](.env.example)
 
 ## Core Capabilities
 
@@ -37,7 +53,7 @@ The platform is built around a modular backend architecture, a modern React fron
 - Recruiter-focused shortlist and dashboard support
 - Containerized deployment with CI-ready structure
 
-## System Architecture
+## Architectural Structure
 
 ```text
 ┌───────────────────────────────────────────────────────────┐
@@ -95,6 +111,42 @@ The platform is built around a modular backend architecture, a modern React fron
 - Backend container: [careerlens-backend/Dockerfile](careerlens-backend/Dockerfile)
 - Frontend container: [careerlens-frontend/Dockerfile](careerlens-frontend/Dockerfile)
 - CI workflows: [.github/workflows/backend.yml](.github/workflows/backend.yml), [.github/workflows/frontend.yml](.github/workflows/frontend.yml)
+
+## Project File Structure
+
+```text
+Capstone Project/
+├── .github/
+│   └── workflows/
+│       ├── backend.yml
+│       └── frontend.yml
+├── careerlens-backend/
+│   ├── app/
+│   │   ├── core/                # Config, DB connection, migrations support
+│   │   ├── models/              # ORM entities (users, skills, occupations, auth)
+│   │   ├── routers/             # API route handlers
+│   │   ├── schemas/             # Pydantic request/response contracts
+│   │   ├── services/            # Business logic and scoring engines
+│   │   └── main.py              # FastAPI app bootstrap
+│   ├── scripts/                 # Data loading, evaluation, model training scripts
+│   ├── requirements.txt
+│   └── Dockerfile
+├── careerlens-frontend/
+│   ├── src/
+│   │   ├── components/          # Reusable UI components
+│   │   ├── pages/               # Screens and feature pages
+│   │   ├── services/            # API integration layer
+│   │   ├── context/             # Auth and global state context
+│   │   └── main.jsx             # Frontend entrypoint
+│   ├── package.json
+│   └── Dockerfile
+├── workflows/
+│   ├── n8n-batch-analysis.json
+│   └── n8n-recruiter-notifications.json
+├── docker-compose.yml
+├── quickstart.sh
+└── README.md
+```
 
 ## Development Approach
 
@@ -174,6 +226,14 @@ Interactive docs are available at `http://localhost:8000/docs` in local mode.
 - Workflow automation templates included ([workflows](workflows))
 - Production-focused repository policy via [.gitignore](.gitignore)
 
+## Remaining Scope
+
+- Advanced observability stack (centralized logs, metrics dashboards, alerting)
+- Stronger model governance (dataset versioning, drift checks, scheduled re-training)
+- Deeper recruiter analytics (conversion funnel, shortlist quality metrics)
+- Multilingual normalization for occupation and skill labels
+- Automated performance benchmarking in CI pipeline
+
 ## Security and Quality Practices
 
 - Secrets kept out of version control
@@ -181,13 +241,6 @@ Interactive docs are available at `http://localhost:8000/docs` in local mode.
 - Authentication and password hashing support in backend auth modules
 - Structured project layout to reduce duplicate logic
 - Commit discipline for production-only artifacts
-
-## Roadmap
-
-- Improve multilingual role and skill normalization
-- Expand recruiter analytics and candidate comparison tooling
-- Introduce advanced model evaluation and model governance pipeline
-- Add managed observability stack for production telemetry
 
 ## Author
 
