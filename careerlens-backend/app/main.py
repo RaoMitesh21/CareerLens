@@ -57,6 +57,8 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "https://careerlens.vercel.app",
         "https://*.vercel.app",  # Allow any Vercel preview
+        "https://www.careerlens.in",
+        "https://careerlens.in",
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
