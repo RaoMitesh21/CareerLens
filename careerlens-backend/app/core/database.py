@@ -2,7 +2,7 @@
 app/core/database.py — Database Engine & Session Factory
 ==========================================================
 Provides:
-  - SQLAlchemy engine (MySQL via PyMySQL)
+  - SQLAlchemy engine (MySQL via PyMySQL or LibSQL for Turso)
   - Session factory
   - Declarative Base for ORM models
   - get_db() dependency for FastAPI route injection
@@ -14,7 +14,21 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import DATABASE_URL
 
 # ── Engine ──────────────────────────────────────────────────────────
-engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
+# For Turso/libsql, disable connection pooling and set connect_args
+if DATABASE_URL.startswith("libsql://"):
+    engine = create_engine(
+        DATABASE_URL,
+        echo=False,
+        connect_args={"check_same_thread": False},
+        poolclass=None  # Disable pooling for libsql
+    )
+else:
+    # MySQL configuration
+    engine = create_engine(
+        DATABASE_URL,
+        echo=False,
+        pool_pre_ping=True
+    )
 
 # ── Session factory ─────────────────────────────────────────────────
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
