@@ -39,8 +39,8 @@ export default function Auth3DBackground({ children }) {
         <motion.div
           className="absolute rounded-full"
           style={{
-            width: 700,
-            height: 700,
+            width: 'clamp(250px, 80vw, 700px)',
+            height: 'clamp(250px, 80vw, 700px)',
             top: '-20%',
             right: '-15%',
             background:
@@ -59,8 +59,8 @@ export default function Auth3DBackground({ children }) {
         <motion.div
           className="absolute rounded-full"
           style={{
-            width: 600,
-            height: 600,
+            width: 'clamp(200px, 70vw, 600px)',
+            height: 'clamp(200px, 70vw, 600px)',
             bottom: '-15%',
             left: '-10%',
             background:
@@ -84,8 +84,8 @@ export default function Auth3DBackground({ children }) {
         <motion.div
           className="absolute rounded-full"
           style={{
-            width: 400,
-            height: 400,
+            width: 'clamp(150px, 50vw, 400px)',
+            height: 'clamp(150px, 50vw, 400px)',
             top: '40%',
             left: '30%',
             background:
@@ -142,8 +142,8 @@ export default function Auth3DBackground({ children }) {
         <div
           className="auth-orbit-ring"
           style={{
-            width: '800px',
-            height: '800px',
+            width: 'clamp(300px, 90vw, 800px)',
+            height: 'clamp(300px, 90vw, 800px)',
             border: '1px solid rgba(0, 194, 203, 0.1)',
             boxShadow: '0 0 50px rgba(0,194,203,0.05), inset 0 0 50px rgba(0,194,203,0.03)',
           }}
@@ -151,8 +151,8 @@ export default function Auth3DBackground({ children }) {
         <div
           className="auth-orbit-ring-2"
           style={{
-            width: '550px',
-            height: '550px',
+            width: 'clamp(200px, 60vw, 550px)',
+            height: 'clamp(200px, 60vw, 550px)',
             border: '1px solid rgba(99, 102, 241, 0.08)',
           }}
         />

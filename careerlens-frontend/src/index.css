@@ -151,6 +151,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    min-height: 44px;
     padding: 0.875rem 2rem;
     background: linear-gradient(180deg, #00d4dd 0%, #00aeb6 100%);
     color: var(--color-brand-white);
@@ -186,6 +187,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    min-height: 44px;
     padding: 0.875rem 2rem;
     background: rgba(255, 255, 255, 0.85);
     color: var(--color-ink);
@@ -223,6 +225,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    min-height: 44px;
     padding: 0.875rem 2rem;
     background: var(--color-brand-gunmetal);
     color: var(--color-brand-white);
@@ -242,7 +245,32 @@
     box-shadow: 0 4px 20px rgba(35, 43, 50, 0.25);
   }
 
-  /* ── Skill Tags ──────────────────────────────────── */
+  /* ── Global form input/textarea ────────────────────────── */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: max(16px, 1rem) !important;
+    min-height: 44px;
+  }
+
+  textarea {
+    min-height: 120px;
+    resize: vertical;
+  }
+
+  @media (max-width: 768px) {
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type="number"] {
+      -moz-appearance: textfield;
+    }
+  }
   .tag-matched {
     display: inline-flex;
     align-items: center;
@@ -290,11 +318,12 @@
   .input-3d {
     width: 100%;
     padding: 0.875rem 1rem;
+    min-height: 44px;
     border-radius: var(--radius-button);
     border: 1px solid rgba(203, 213, 225, 0.5);
     background: rgba(255, 255, 255, 0.95);
     color: #1e293b;
-    font-size: 0.9375rem;
+    font-size: max(16px, 0.9375rem);
     font-weight: 500;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     outline: none;
@@ -364,11 +393,12 @@
   .auth-input {
     width: 100%;
     padding: 0.875rem 1rem;
+    min-height: 44px;
     border-radius: 0.75rem;
     border: 1px solid rgba(203, 213, 225, 0.6);
     background: rgba(255, 255, 255, 0.9);
     color: #1e293b; /* Slate 800 */
-    font-size: 0.9375rem;
+    font-size: max(16px, 0.9375rem);
     font-weight: 500;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     outline: none;
@@ -423,7 +453,7 @@
 
   /* ── OTP Digit Box (Light) ────────────────────────── */
   .auth-otp-box {
-    width: 3.5rem;
+    width: clamp(3rem, 8vw, 3.5rem);
     height: 4rem;
     text-align: center;
     font-size: 1.5rem;
@@ -435,6 +465,7 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     outline: none;
     box-shadow: 0 4px 6px rgba(15, 23, 42, 0.03);
+    min-height: 44px;
   }
 
   .auth-otp-box:focus {

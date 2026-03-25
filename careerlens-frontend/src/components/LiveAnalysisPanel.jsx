@@ -50,7 +50,7 @@ function ScoreRing({ score = 87, size = 180, animate = false }) {
     <div className="relative flex items-center justify-center mx-auto" style={{ width: displaySize, height: displaySize }}>
       <div className="absolute inset-0 rounded-full pointer-events-none"
         style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%)', filter: 'blur(16px)', transform: 'scale(1.3)' }} />
-      <svg width={size} height={size} className="-rotate-90 relative z-10">
+      <svg width={displaySize} height={displaySize} className="-rotate-90 relative z-10">
         <defs>
           <linearGradient id="sr-grad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#06b6d4" />
@@ -59,9 +59,9 @@ function ScoreRing({ score = 87, size = 180, animate = false }) {
           </linearGradient>
           <filter id="sr-glow"><feGaussianBlur stdDeviation="2.5" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
         </defs>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(148,163,184,0.12)" strokeWidth={stroke} />
+        <circle cx={displaySize / 2} cy={displaySize / 2} r={r} fill="none" stroke="rgba(148,163,184,0.12)" strokeWidth={stroke} />
         <motion.circle
-          cx={size / 2} cy={size / 2} r={r}
+          cx={displaySize / 2} cy={displaySize / 2} r={r}
           fill="none" stroke="url(#sr-grad)" strokeWidth={stroke}
           strokeLinecap="round" strokeDasharray={C} filter="url(#sr-glow)"
           initial={{ strokeDashoffset: animate ? C : offset }}

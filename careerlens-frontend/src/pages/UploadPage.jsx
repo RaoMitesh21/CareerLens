@@ -197,8 +197,8 @@ export default function UploadPage() {
           >
             {/* Brand icon with spinning ring */}
             <div className="relative mb-6 flex items-center justify-center">
-              <div className="w-24 h-24 rounded-full border-4 border-surface-alt" />
-              <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-transparent animate-spin" style={{ borderTopColor: '#00C2CB' }} />
+              <div className="rounded-full border-4 border-surface-alt" style={{ width: 'clamp(80px, 20vw, 96px)', height: 'clamp(80px, 20vw, 96px)' }} />
+              <div className="absolute rounded-full border-4 border-transparent animate-spin" style={{ inset: 0, width: 'clamp(80px, 20vw, 96px)', height: 'clamp(80px, 20vw, 96px)', borderTopColor: '#00C2CB' }} />
               <div className="absolute inset-0 flex items-center justify-center">
                 <LogoIcon size={40} />
               </div>
