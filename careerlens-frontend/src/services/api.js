@@ -4,7 +4,11 @@
    All backend communication lives here. No fetch() calls elsewhere.
    ═══════════════════════════════════════════════════════════════════ */
 
-const API_BASE = '/api';
+// Use environment variable for production, fallback to relative path for development
+const API_BASE_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
+  ? '/api' 
+  : (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000');
+const API_BASE = API_BASE_URL.endsWith('/api') ? API_BASE_URL : `${API_BASE_URL}/api`;
 const DEFAULT_ANALYSIS_MODE = 'esco';
 
 function normalizeAnalysisMode(mode) {
