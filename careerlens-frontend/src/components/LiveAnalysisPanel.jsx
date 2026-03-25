@@ -39,13 +39,15 @@ const STEP_INTERVAL = 1000;
 
 /* ── Score Ring ──────────────────────────────────────────────── */
 function ScoreRing({ score = 87, size = 180, animate = false }) {
+  const [responsive, setResponsive] = useState(false);
+  const displaySize = typeof window !== 'undefined' && window.innerWidth < 640 ? Math.min(size, 150) : size;
   const stroke = 12;
-  const r = (size - stroke) / 2;
+  const r = (displaySize - stroke) / 2;
   const C = 2 * Math.PI * r;
   const offset = C - (Math.min(100, Math.max(0, score)) / 100) * C;
 
   return (
-    <div className="relative flex items-center justify-center mx-auto" style={{ width: size, height: size }}>
+    <div className="relative flex items-center justify-center mx-auto" style={{ width: displaySize, height: displaySize }}>
       <div className="absolute inset-0 rounded-full pointer-events-none"
         style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%)', filter: 'blur(16px)', transform: 'scale(1.3)' }} />
       <svg width={size} height={size} className="-rotate-90 relative z-10">

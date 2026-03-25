@@ -158,8 +158,8 @@ export default function ResultsPage() {
     <div className="min-h-screen pt-28 pb-20">
       {/* Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
-        <div className="absolute rounded-full blur-3xl opacity-12" style={{ width: 600, height: 600, top: '5%', right: '-8%', background: 'radial-gradient(circle, rgba(0,194,203,0.18) 0%, transparent 70%)' }} />
-        <div className="absolute rounded-full blur-3xl opacity-8" style={{ width: 400, height: 400, bottom: '10%', left: '-5%', background: 'radial-gradient(circle, rgba(35,43,50,0.10) 0%, transparent 70%)' }} />
+        <div className="absolute rounded-full blur-3xl opacity-12" style={{ width: 'clamp(250px, 60vw, 600px)', height: 'clamp(250px, 60vw, 600px)', top: '5%', right: '-8%', background: 'radial-gradient(circle, rgba(0,194,203,0.18) 0%, transparent 70%)' }} />
+        <div className="absolute rounded-full blur-3xl opacity-8" style={{ width: 'clamp(200px, 50vw, 400px)', height: 'clamp(200px, 50vw, 400px)', bottom: '10%', left: '-5%', background: 'radial-gradient(circle, rgba(35,43,50,0.10) 0%, transparent 70%)' }} />
       </div>
 
       <div className="section-container relative" style={{ zIndex: 1 }}>
@@ -270,7 +270,7 @@ export default function ResultsPage() {
         </motion.div>
 
         {/* ═══ SCORE + TIER BREAKDOWN + RADAR ════════════════════════════ */}
-        <div className="grid lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
           {/* Score Card */}
           <motion.div
             className="glass-card p-8 flex flex-col items-center justify-center lg:col-span-1"

@@ -122,15 +122,15 @@ export default function LandingPage() {
       <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
         {/* Cyan blob — top right */}
         <div className="absolute rounded-full blur-3xl opacity-25"
-          style={{ width: 800, height: 800, top: '-15%', right: '-10%',
+          style={{ width: 'clamp(300px, 80vw, 800px)', height: 'clamp(300px, 80vw, 800px)', top: '-15%', right: '-10%',
             background: 'radial-gradient(circle, rgba(0,194,203,0.25) 0%, rgba(14,165,233,0.08) 40%, transparent 70%)' }} />
         {/* Violet blob — left */}
         <div className="absolute rounded-full blur-3xl opacity-15"
-          style={{ width: 600, height: 600, top: '35%', left: '-12%',
+          style={{ width: 'clamp(200px, 60vw, 600px)', height: 'clamp(200px, 60vw, 600px)', top: '35%', left: '-12%',
             background: 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, rgba(59,130,246,0.05) 50%, transparent 70%)' }} />
         {/* Warm blob — bottom right */}
         <div className="absolute rounded-full blur-3xl opacity-10"
-          style={{ width: 400, height: 400, bottom: '5%', right: '10%',
+          style={{ width: 'clamp(150px, 50vw, 400px)', height: 'clamp(150px, 50vw, 400px)', bottom: '5%', right: '10%',
             background: 'radial-gradient(circle, rgba(249,115,22,0.10) 0%, transparent 70%)' }} />
         {/* Grid pattern */}
         <div className="absolute inset-0 opacity-[0.02]"
@@ -141,7 +141,7 @@ export default function LandingPage() {
       {/* ── Hero Section ─────────────────────────────────────────── */}
       <section id="hero" className="relative pt-32 pb-16 lg:pt-40 lg:pb-24" style={{ zIndex: 1 }}>
         <div className="section-container">
-          <div className="grid lg:grid-cols-2 gap-12 items-start">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
 
             {/* Left — Copy */}
             <div className="flex flex-col gap-6">
@@ -165,7 +165,7 @@ export default function LandingPage() {
               </motion.div>
 
               {/* Headline — rotating taglines */}
-              <div className="relative" style={{ minHeight: 'clamp(6rem, 14vw, 9.5rem)' }}>
+              <div className="relative" style={{ minHeight: 'clamp(4rem, 12vw, 9.5rem)' }}>
                 {/* Radial glow behind headline */}
                 <div className="absolute -inset-10 rounded-full blur-3xl opacity-30 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, rgba(0,194,203,0.2) 0%, rgba(139,92,246,0.08) 50%, transparent 70%)' }} />
                 <AnimatePresence mode="wait">
