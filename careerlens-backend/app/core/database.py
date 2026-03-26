@@ -10,6 +10,13 @@ Provides:
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.pool import NullPool
+
+# IMPORTANT: Register libsql dialect for Turso support
+try:
+    import sqlalchemy_libsql  # noqa: F401
+except ImportError:
+    pass
 
 from app.core.config import DATABASE_URL
 
@@ -20,7 +27,7 @@ if DATABASE_URL.startswith("libsql://"):
         DATABASE_URL,
         echo=False,
         connect_args={"check_same_thread": False},
-        poolclass=None  # Disable pooling for libsql
+        poolclass=NullPool  # Disable pooling for libsql
     )
 else:
     # MySQL configuration
