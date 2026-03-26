@@ -6,31 +6,37 @@ Reads from environment variables (.env) with sensible defaults.
 """
 
 import os
+import sys
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
 # ── Database ────────────────────────────────────────────────────────
-DB_USER: str = os.getenv("DB_USER", "root")
-DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
-DB_HOST: str = os.getenv("DB_HOST", "localhost")
-DB_PORT: str = os.getenv("DB_PORT", "3306")
-DB_NAME: str = os.getenv("DB_NAME", "careerlens")
+# Check for direct DATABASE_URL first
+DATABASE_URL: str = os.getenv("DATABASE_URL")
 
-DEFAULT_DATABASE_URL: str = (
-    f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-)
-DATABASE_URL: str = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
-
-# Debug: Log which URL is being used
-import sys
-db_source = "environment variable (TURSO)" if os.getenv("DATABASE_URL") else "default (MySQL)"
-print(f"\n📌 DATABASE_URL loaded from {db_source}", file=sys.stderr)
-if DATABASE_URL.startswith("libsql://"):
-    print(f"✅ Using Turso (libsql) database", file=sys.stderr)
+# If not found, try to construct from individual env vars (Turso priority)
+if not DATABASE_URL:
+    turso_url = os.getenv("TURSO_CONNECTION_URL")
+    if turso_url:
+        DATABASE_URL = turso_url
+        print(f"✅ Using Turso (from TURSO_CONNECTION_URL)", file=sys.stderr)
+    else:
+        # Fallback to MySQL using individual env vars
+        DB_USER: str = os.getenv("DB_USER", "root")
+        DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
+        DB_HOST: str = os.getenv("DB_HOST", "localhost")
+        DB_PORT: str = os.getenv("DB_PORT", "3306")
+        DB_NAME: str = os.getenv("DB_NAME", "careerlens")
+        
+        DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+        print(f"⚠️  Using MySQL fallback (localhost)", file=sys.stderr)
 else:
-    print(f"⚠️  Using MySQL fallback (localhost)", file=sys.stderr)
+    if DATABASE_URL.startswith("libsql://"):
+        print(f"✅ Using Turso (from DATABASE_URL)", file=sys.stderr)
+    else:
+        print(f"⚠️  Using MySQL (from DATABASE_URL)", file=sys.stderr)
 
 
 # ── Application ─────────────────────────────────────────────────────
