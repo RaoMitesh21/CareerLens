@@ -23,6 +23,15 @@ DEFAULT_DATABASE_URL: str = (
 )
 DATABASE_URL: str = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
 
+# Debug: Log which URL is being used
+import sys
+db_source = "environment variable (TURSO)" if os.getenv("DATABASE_URL") else "default (MySQL)"
+print(f"\n📌 DATABASE_URL loaded from {db_source}", file=sys.stderr)
+if DATABASE_URL.startswith("libsql://"):
+    print(f"✅ Using Turso (libsql) database", file=sys.stderr)
+else:
+    print(f"⚠️  Using MySQL fallback (localhost)", file=sys.stderr)
+
 
 # ── Application ─────────────────────────────────────────────────────
 APP_TITLE: str = "CareerLens — ESCO Skill-Gap Analyzer"
