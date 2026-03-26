@@ -14,3 +14,5 @@ services:
         value: 3.11
       - key: TURSO_DB_NAME
         value: careerlens-v2
+      - key: TURSO_CONNECTION_URL
+        sync: false
