@@ -32,27 +32,42 @@ def connect(*args, **kwargs):
     if not url:
         raise OperationalError("Missing Turso database URL")
 
+    url_str = str(url)
+    
     # Support either libsql:// or https:// forms.
-    if str(url).startswith("libsql://"):
-        url = str(url).replace("libsql://", "https://", 1)
+    if url_str.startswith("libsql://"):
+        url_str = url_str.replace("libsql://", "https://", 1)
 
     # Extract auth token from URL query when present.
-    parsed = urllib.parse.urlparse(str(url))
-    query = urllib.parse.parse_qs(parsed.query)
-    if not auth_token:
-        auth_token = query.get("authToken", [None])[0] or query.get("authtoken", [None])[0]
+    parsed = urllib.parse.urlparse(url_str)
+    if not auth_token and parsed.query:
+        # parse_qs returns lists; get the first value and ensure it's decoded
+        query = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+        auth_token = query.get("authToken", [None])[0]
+        if not auth_token:
+            auth_token = query.get("authtoken", [None])[0]
+        # Ensure token is properly decoded (parse_qs does this, but be explicit)
+        if auth_token:
+            auth_token = auth_token.strip()
 
+    # Remove query string from URL for Turso HTTP endpoint
     if parsed.query:
-        url = urllib.parse.urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+        url_str = urllib.parse.urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
 
-    # Optional explicit token env fallback for Render dashboard configs.
+    # Explicit token from TURSO_AUTH_TOKEN env var (Render environment variable)
     if not auth_token:
         auth_token = os.getenv("TURSO_AUTH_TOKEN")
+        if auth_token:
+            auth_token = auth_token.strip()
 
     if not auth_token:
-        raise OperationalError("Missing Turso auth token (authToken query param or TURSO_AUTH_TOKEN)")
+        raise OperationalError("Missing Turso auth token (authToken URL param or TURSO_AUTH_TOKEN env var)")
+    
+    # Validate token is not obviously truncated (JWT tokens are typically 200+ chars)
+    if len(auth_token) < 50:
+        raise OperationalError(f"Auth token appears truncated or invalid (length: {len(auth_token)})")
 
-    return Connection(url, auth_token)
+    return Connection(url_str, auth_token)
 
 class Connection:
     def __init__(self, url, auth_token):
@@ -102,11 +117,22 @@ class Cursor:
             ]
         })
         
+        # Ensure URL is properly formatted for Turso HTTP API
+        base_url = self.url.rstrip('/')
+        if not base_url.startswith("https://"):
+            base_url = "https://" + base_url
+        turso_endpoint = f"{base_url}/v2/pipeline"
+        
+        # Ensure auth token has no whitespace
+        auth_token = self.auth_token.strip() if self.auth_token else ""
+        if not auth_token:
+            raise OperationalError("Auth token is empty")
+        
         req = urllib.request.Request(
-            f"{self.url.rstrip('/')}/v2/pipeline",
+            turso_endpoint,
             data=payload.encode('utf-8'),
             headers={
-                "Authorization": f"Bearer {self.auth_token}",
+                "Authorization": f"Bearer {auth_token}",
                 "Content-Type": "application/json"
             },
             method="POST"
