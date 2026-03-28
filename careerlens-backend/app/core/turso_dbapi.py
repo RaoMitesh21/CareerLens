@@ -2,7 +2,6 @@
 app/core/turso_dbapi.py - Pure Python DBAPI 2.0 interface for Turso
 Uses the modern `libsql-client` library via HTTP APIs.
 """
-import libsql_client
 import sqlite3
 
 # DBAPI 2.0 required properties
@@ -20,6 +19,7 @@ from sqlite3 import (
 
 import urllib.request
 import urllib.error
+import urllib.parse
 import json
 import os
 import time
@@ -28,8 +28,30 @@ import socket
 def connect(*args, **kwargs):
     url = kwargs.get("database") or (args[0] if args else None)
     auth_token = kwargs.get("auth_token")
-    if "?authToken=" in url:
-        url, auth_token = url.split("?authToken=", 1)
+
+    if not url:
+        raise OperationalError("Missing Turso database URL")
+
+    # Support either libsql:// or https:// forms.
+    if str(url).startswith("libsql://"):
+        url = str(url).replace("libsql://", "https://", 1)
+
+    # Extract auth token from URL query when present.
+    parsed = urllib.parse.urlparse(str(url))
+    query = urllib.parse.parse_qs(parsed.query)
+    if not auth_token:
+        auth_token = query.get("authToken", [None])[0] or query.get("authtoken", [None])[0]
+
+    if parsed.query:
+        url = urllib.parse.urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+
+    # Optional explicit token env fallback for Render dashboard configs.
+    if not auth_token:
+        auth_token = os.getenv("TURSO_AUTH_TOKEN")
+
+    if not auth_token:
+        raise OperationalError("Missing Turso auth token (authToken query param or TURSO_AUTH_TOKEN)")
+
     return Connection(url, auth_token)
 
 class Connection:
@@ -61,10 +83,11 @@ class Cursor:
         is_read_only = sql_head.startswith(("SELECT", "PRAGMA", "WITH"))
         args = []
         if isinstance(parameters, dict):
-            # For named params over HTTP, Turso API takes dict or list of {name, value}
-            args = [{"name": str(k), "value": {"type": "text", "value": str(v)} if v is not None else {"type": "null"}} for k, v in parameters.items()]
+            # Turso accepts plain JSON values for named parameters.
+            args = {str(k): v for k, v in parameters.items()}
         elif isinstance(parameters, (list, tuple)):
-            args = [{"type": "text", "value": str(v)} if v is not None else {"type": "null"} for v in parameters]
+            # Turso accepts positional parameter arrays as plain JSON values.
+            args = list(parameters)
             
         payload = json.dumps({
             "requests": [
@@ -115,14 +138,17 @@ class Cursor:
             for row in rows:
                 parsed_row = []
                 for val in row:
-                    if val.get("type") == "null":
-                        parsed_row.append(None)
-                    elif val.get("type") == "integer":
-                        parsed_row.append(int(val.get("value")))
-                    elif val.get("type") == "float":
-                        parsed_row.append(float(val.get("value")))
+                    if isinstance(val, dict):
+                        if val.get("type") == "null":
+                            parsed_row.append(None)
+                        elif val.get("type") == "integer":
+                            parsed_row.append(int(val.get("value")))
+                        elif val.get("type") == "float":
+                            parsed_row.append(float(val.get("value")))
+                        else:
+                            parsed_row.append(val.get("value"))
                     else:
-                        parsed_row.append(val.get("value"))
+                        parsed_row.append(val)
                 parsed_rows.append(tuple(parsed_row))
 
             self._rows = parsed_rows
@@ -136,16 +162,16 @@ class Cursor:
                 with urllib.request.urlopen(req, timeout=timeout_seconds) as response:
                     _parse_response(response.read().decode())
                     return self
+            except urllib.error.HTTPError as e:
+                err_msg = e.read().decode(errors="ignore")
+                # HTTP 4xx indicates request/auth problems; do not retry as timeout.
+                raise DatabaseError(f"HTTP {e.code}: {err_msg}")
             except (TimeoutError, socket.timeout, urllib.error.URLError) as e:
                 last_exc = e
                 if attempt < max_retries:
                     time.sleep(0.25 * (attempt + 1))
                     continue
                 raise OperationalError(f"Turso request timeout/network error after {attempt + 1} attempt(s): {e}")
-            except urllib.error.HTTPError as e:
-                err_msg = e.read().decode()
-                print("TURSO HTTP ERROR:", err_msg)
-                raise DatabaseError(f"HTTP {e.code}: {err_msg}")
             except Exception as e:
                 if "UNIQUE constraint failed" in str(e):
                     raise IntegrityError(str(e))
