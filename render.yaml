@@ -4,7 +4,7 @@ services:
     runtime: python-3.11
     rootDir: careerlens-backend
     buildCommand: bash build.sh
-    startCommand: bash start.sh
+    startCommand: bash careerlens-backend/start.sh
     envVars:
       - key: PYTHON_VERSION
         value: 3.11
