@@ -542,7 +542,7 @@ export default function ResultsPage() {
             <p className="text-sm text-ink-secondary mb-8">{roadmap.summary}</p>
 
             {/* Phase cards */}
-            <div className="relative pl-8">
+            <div className="relative pl-4 sm:pl-8">
               <div className="absolute left-3 top-2 bottom-2 w-px bg-surface-alt" />
               {roadmap.phases.map((phase, i) => (
                 <motion.div key={i} className="relative mb-10 last:mb-0" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.6 + i * 0.15, duration: 0.5 }}>
@@ -600,7 +600,7 @@ export default function ResultsPage() {
           <div className="glass-card p-6 inline-block max-w-2xl mx-auto mb-6">
             <p className="text-sm text-ink leading-relaxed">{analysis.analysis_summary}</p>
           </div>
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link to="/student/analyzer" className="btn-primary">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
               Analyze Another Resume

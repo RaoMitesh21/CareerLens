@@ -24,6 +24,7 @@ from app.routers.resume import router as resume_router
 from app.routers.roadmap import router as roadmap_router
 from app.routers.bot import router as bot_router
 from app.routers.contact import router as contact_router
+from app.routers.newsletter import router as newsletter_router
 from app.routers.recruiter_shortlist import router as recruiter_shortlist_router
 from app.routers.dashboard_state import router as dashboard_state_router
 from app.routers.ml_fit import router as ml_fit_router
@@ -75,6 +76,7 @@ app.include_router(resume_router)
 app.include_router(roadmap_router)
 app.include_router(bot_router)
 app.include_router(contact_router)
+app.include_router(newsletter_router)
 app.include_router(recruiter_shortlist_router)
 app.include_router(dashboard_state_router)
 app.include_router(ml_fit_router)

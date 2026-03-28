@@ -6,6 +6,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -22,6 +23,11 @@ security = HTTPBearer(auto_error=False)
 
 def _normalize_analysis_mode(mode: Optional[str]) -> str:
     return "hybrid" if str(mode or "").strip().lower() == "hybrid" else "esco"
+
+
+def _normalize_key(value: str) -> str:
+    # Keep persisted display text readable while normalizing matching behavior.
+    return " ".join((value or "").strip().split())
 
 
 def get_current_user(
@@ -86,7 +92,8 @@ def list_shortlists(
     )
 
     if role:
-        query = query.filter(RecruiterShortlist.role_title == role)
+        normalized_role = _normalize_key(role).lower()
+        query = query.filter(func.lower(func.trim(RecruiterShortlist.role_title)) == normalized_role)
 
     return query.order_by(RecruiterShortlist.created_at.desc()).all()
 
@@ -98,10 +105,15 @@ def upsert_shortlist(
     db: Session = Depends(get_db),
 ):
     """Save one shortlisted candidate for the authenticated recruiter."""
+    normalized_role_title = _normalize_key(request.role_title)
+    normalized_candidate_name = _normalize_key(request.candidate_name)
+    normalized_mode = _normalize_analysis_mode(request.analysis_mode)
+
     existing = db.query(RecruiterShortlist).filter(
         RecruiterShortlist.recruiter_id == current_user.id,
-        RecruiterShortlist.role_title == request.role_title.strip(),
-        RecruiterShortlist.candidate_name == request.candidate_name.strip(),
+        func.lower(func.trim(RecruiterShortlist.role_title)) == normalized_role_title.lower(),
+        func.lower(func.trim(RecruiterShortlist.candidate_name)) == normalized_candidate_name.lower(),
+        func.lower(func.trim(func.coalesce(RecruiterShortlist.analysis_mode, "esco"))) == normalized_mode,
     ).first()
 
     if existing:
@@ -111,30 +123,38 @@ def upsert_shortlist(
         existing.secondary_match = request.secondary_match
         existing.bonus_match = request.bonus_match
         existing.match_label = request.match_label
-        existing.analysis_mode = _normalize_analysis_mode(request.analysis_mode)
+        existing.analysis_mode = normalized_mode
         existing.top_strengths = request.top_strengths
         existing.top_gaps = request.top_gaps
-        db.commit()
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise HTTPException(status_code=500, detail="Failed to save shortlist")
         db.refresh(existing)
         return existing
 
     entry = RecruiterShortlist(
         recruiter_id=current_user.id,
-        role_title=request.role_title.strip(),
-        candidate_name=request.candidate_name.strip(),
+        role_title=normalized_role_title,
+        candidate_name=normalized_candidate_name,
         rank=request.rank,
         overall_score=request.overall_score,
         core_match=request.core_match,
         secondary_match=request.secondary_match,
         bonus_match=request.bonus_match,
         match_label=request.match_label,
-        analysis_mode=_normalize_analysis_mode(request.analysis_mode),
+        analysis_mode=normalized_mode,
         top_strengths=request.top_strengths,
         top_gaps=request.top_gaps,
     )
 
-    db.add(entry)
-    db.commit()
+    try:
+        db.add(entry)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to save shortlist")
     db.refresh(entry)
     return entry
 
@@ -155,5 +175,9 @@ def delete_shortlist(
         raise HTTPException(status_code=404, detail="Shortlist entry not found")
 
     db.delete(entry)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to delete shortlist")
     return Response(status_code=204)

@@ -56,7 +56,7 @@ const features = [
     step: '01',
     title: 'Precision Match Engine',
     description:
-      'ESCO-powered 3-tier scoring classifies skills as Core, Secondary, and Bonus — then calculates calibrated match scores with confidence weighting.',
+      'CareerLens AI Engine-powered 3-tier scoring classifies skills as Core, Secondary, and Bonus — then calculates calibrated match scores with confidence weighting.',
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" />
@@ -95,9 +95,9 @@ const features = [
 
 /* ── Stats ────────────────────────────────────────────────────────── */
 const stats = [
-  { value: '3007', suffix: '', label: 'Occupations', icon: '◆' },
-  { value: '13896', suffix: '', label: 'Skills Tracked', icon: '◈' },
-  { value: '123000', suffix: '+', label: 'Skill Relations', icon: '⊕' },
+  { value: '3007', suffix: '', label: 'Occupations', icon: '◆', iconColor: '#0891b2' },
+  { value: '13896', suffix: '', label: 'Skills Tracked', icon: '◈', iconColor: '#0891b2' },
+  { value: '123000', suffix: '+', label: 'Skill Relations', icon: '⊕', iconColor: '#0891b2' },
 ];
 
 export default function LandingPage() {
@@ -106,6 +106,10 @@ export default function LandingPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [formStatus, setFormStatus] = useState(null); // 'success' or 'error'
   const [formMessage, setFormMessage] = useState('');
+  const [nlEmail, setNlEmail] = useState('');
+  const [nlLoading, setNlLoading] = useState(false);
+  const [nlStatus, setNlStatus] = useState(null);
+  const [nlMessage, setNlMessage] = useState('');
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -122,29 +126,52 @@ export default function LandingPage() {
       <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
         {/* Cyan blob — top right */}
         <div className="absolute rounded-full blur-3xl opacity-25"
-          style={{ width: 'clamp(300px, 80vw, 800px)', height: 'clamp(300px, 80vw, 800px)', top: '-15%', right: '-10%',
-            background: 'radial-gradient(circle, rgba(0,194,203,0.25) 0%, rgba(14,165,233,0.08) 40%, transparent 70%)' }} />
+          style={{
+            width: 'clamp(300px, 80vw, 800px)', height: 'clamp(300px, 80vw, 800px)', top: '-15%', right: '-10%',
+            background: 'radial-gradient(circle, rgba(0,194,203,0.25) 0%, rgba(14,165,233,0.08) 40%, transparent 70%)'
+          }} />
         {/* Violet blob — left */}
         <div className="absolute rounded-full blur-3xl opacity-15"
-          style={{ width: 'clamp(200px, 60vw, 600px)', height: 'clamp(200px, 60vw, 600px)', top: '35%', left: '-12%',
-            background: 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, rgba(59,130,246,0.05) 50%, transparent 70%)' }} />
+          style={{
+            width: 'clamp(200px, 60vw, 600px)', height: 'clamp(200px, 60vw, 600px)', top: '35%', left: '-12%',
+            background: 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, rgba(59,130,246,0.05) 50%, transparent 70%)'
+          }} />
         {/* Warm blob — bottom right */}
         <div className="absolute rounded-full blur-3xl opacity-10"
-          style={{ width: 'clamp(150px, 50vw, 400px)', height: 'clamp(150px, 50vw, 400px)', bottom: '5%', right: '10%',
-            background: 'radial-gradient(circle, rgba(249,115,22,0.10) 0%, transparent 70%)' }} />
+          style={{
+            width: 'clamp(150px, 50vw, 400px)', height: 'clamp(150px, 50vw, 400px)', bottom: '5%', right: '10%',
+            background: 'radial-gradient(circle, rgba(249,115,22,0.10) 0%, transparent 70%)'
+          }} />
         {/* Grid pattern */}
         <div className="absolute inset-0 opacity-[0.02]"
-          style={{ backgroundImage: 'linear-gradient(#232B32 1px, transparent 1px), linear-gradient(90deg, #232B32 1px, transparent 1px)',
-            backgroundSize: '60px 60px' }} />
+          style={{
+            backgroundImage: 'linear-gradient(#232B32 1px, transparent 1px), linear-gradient(90deg, #232B32 1px, transparent 1px)',
+            backgroundSize: '60px 60px'
+          }} />
       </div>
 
       {/* ── Hero Section ─────────────────────────────────────────── */}
-      <section id="hero" className="relative pt-32 pb-16 lg:pt-40 lg:pb-24" style={{ zIndex: 1 }}>
+      <section id="hero" className="relative pt-24 pb-8 sm:pt-28 sm:pb-12 md:pt-32 md:pb-16 lg:pt-40 lg:pb-24" style={{ zIndex: 1, scrollMarginTop: '80px' }}>
         <div className="section-container">
-          <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
+          <div className="grid md:grid-cols-2 gap-6 md:gap-8 lg:gap-12 items-start">
 
-            {/* Left — Copy */}
-            <div className="flex flex-col gap-6">
+            {/* LiveAnalysisPanel — FIRST on mobile, RIGHT column on desktop */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3, duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+              className="order-first md:order-last flex justify-center"
+              style={{
+                filter: 'drop-shadow(0 20px 40px rgba(0,194,203,0.12))',
+              }}
+            >
+              <div className="w-full max-w-[360px] sm:max-w-[400px] md:max-w-[420px] lg:max-w-[500px]">
+                <LiveAnalysisPanel />
+              </div>
+            </motion.div>
+
+            {/* Left — Copy (SECOND on mobile, LEFT column on desktop) */}
+            <div className="flex flex-col gap-4 md:gap-5 lg:gap-6 order-last md:order-first">
               {/* Badge */}
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
@@ -165,7 +192,7 @@ export default function LandingPage() {
               </motion.div>
 
               {/* Headline — rotating taglines */}
-              <div className="relative" style={{ minHeight: 'clamp(4rem, 12vw, 9.5rem)' }}>
+              <div className="relative" style={{ minHeight: 'clamp(3.5rem, 10vw, 9.5rem)' }}>
                 {/* Radial glow behind headline */}
                 <div className="absolute -inset-10 rounded-full blur-3xl opacity-30 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, rgba(0,194,203,0.2) 0%, rgba(139,92,246,0.08) 50%, transparent 70%)' }} />
                 <AnimatePresence mode="wait">
@@ -193,7 +220,7 @@ export default function LandingPage() {
                 </AnimatePresence>
 
                 {/* Progress bar under headline */}
-                <div className="absolute bottom-0 left-0 w-64 h-[3px] rounded-full overflow-hidden" style={{ background: 'rgba(0,194,203,0.12)' }}>
+                <div className="hidden lg:block absolute bottom-0 left-0 w-64 h-[3px] rounded-full overflow-hidden" style={{ background: 'rgba(0,194,203,0.12)' }}>
                   <motion.div
                     key={tagIdx}
                     className="h-full rounded-full"
@@ -210,7 +237,7 @@ export default function LandingPage() {
                 initial={{ y: 30, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.3, duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-                className="text-ink-secondary text-lg max-w-md leading-relaxed"
+                className="text-ink-secondary text-base sm:text-lg max-w-md leading-relaxed"
               >
                 Upload your resume. Pick a role. Get an instant, data-driven
                 breakdown of what you have, what you're missing, and how to
@@ -222,7 +249,7 @@ export default function LandingPage() {
                 initial={{ y: 30, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.45, duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-                className="flex flex-col md:flex-row items-start md:items-center gap-3 pt-2"
+                className="flex flex-row flex-wrap items-center gap-2 sm:gap-2.5 pt-1"
               >
                 <Link to="/signup" className="btn-primary group">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:-translate-y-0.5">
@@ -251,20 +278,20 @@ export default function LandingPage() {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.6, duration: 0.6 }}
-                className="flex items-center gap-6 pt-4"
+                className="flex items-center flex-wrap gap-2 sm:gap-3 lg:gap-4 pt-2"
               >
                 {stats.map((stat, i) => (
                   <motion.div
                     key={i}
-                    className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl"
+                    className="flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl flex-1 min-w-0 sm:flex-initial"
                     style={{ background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(35,43,50,0.06)' }}
                     whileHover={{ scale: 1.04, y: -2 }}
                     transition={{ type: 'spring', stiffness: 400 }}
                   >
-                    <span className="text-lg">{stat.icon}</span>
+                    <span className="text-lg" style={{ color: stat.iconColor }}>{stat.icon}</span>
                     <div className="flex flex-col">
-                      <span className="text-lg text-ink leading-tight"
-                        style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+                      <span className="text-sm sm:text-base lg:text-lg text-slate-900 leading-tight"
+                        style={{ fontFamily: 'var(--font-display)', fontWeight: 800, color: '#1e293b' }}>
                         <AnimatedNum value={stat.value} suffix={stat.suffix} />
                       </span>
                       <span className="text-[0.65rem] text-ink-muted uppercase tracking-wider leading-tight">
@@ -275,19 +302,6 @@ export default function LandingPage() {
                 ))}
               </motion.div>
             </div>
-
-            {/* Right — Floating Nodes */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5, duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
-              className="hidden lg:block relative"
-              style={{
-                filter: 'drop-shadow(0 20px 40px rgba(0,194,203,0.12))',
-              }}
-            >
-              <LiveAnalysisPanel />
-            </motion.div>
           </div>
         </div>
       </section>
@@ -303,10 +317,10 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
           >
             <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-muted">
-              Powered by the European Skills Framework
+              Powered by CareerLens AI Engine
             </span>
-            <div className="flex items-center gap-8 text-ink-muted/40">
-              {['ESCO', 'FastAPI', 'React', 'MySQL', 'Python'].map((t, i) => (
+            <div className="flex items-center flex-wrap justify-center gap-4 sm:gap-6 md:gap-8 text-ink-muted/40">
+              {['CareerLens Intelligence Engine', 'FastAPI', 'React', 'MySQL', 'Python'].map((t, i) => (
                 <span key={i} className="text-sm font-bold tracking-wider uppercase" style={{ fontFamily: 'var(--font-display)' }}>{t}</span>
               ))}
             </div>
@@ -315,7 +329,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Features Section ─────────────────────────────────────── */}
-      <section id="features" className="relative py-24" style={{ zIndex: 1 }}>
+      <section id="features" className="relative py-16 sm:py-20 lg:py-24" style={{ zIndex: 1, scrollMarginTop: '80px' }}>
         <div className="section-container">
           {/* Section Header */}
           <motion.div
@@ -350,7 +364,7 @@ export default function LandingPage() {
             {features.map((feature, i) => (
               <motion.div
                 key={i}
-                className="glass-card p-8 flex flex-col gap-4 relative overflow-hidden group"
+                className="glass-card p-5 sm:p-6 lg:p-8 flex flex-col gap-4 relative overflow-hidden group"
                 initial={{ y: 40, opacity: 0 }}
                 whileInView={{ y: 0, opacity: 1 }}
                 whileHover={{ y: -8, scale: 1.02 }}
@@ -396,7 +410,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── How It Helps Students Section ────────────────────────── */}
-      <section id="benefits" className="relative py-24" style={{ zIndex: 1 }}>
+      <section id="benefits" className="relative py-16 sm:py-20 lg:py-24" style={{ zIndex: 1, scrollMarginTop: '80px' }}>
         <div className="section-container">
           {/* Section Header */}
           <motion.div
@@ -473,7 +487,7 @@ export default function LandingPage() {
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(6,182,212,0.08) 100%)' }}>
                   {benefit.icon}
                 </div>
-                
+
                 {/* Title */}
                 <h3 className="text-base text-ink tracking-tight font-semibold"
                   style={{ fontFamily: 'var(--font-display)' }}>
@@ -491,7 +505,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── How It Helps Recruiters Section ──────────────────────── */}
-      <section className="relative py-24 border-t border-surface-alt" style={{ zIndex: 1 }}>
+      <section className="relative py-16 sm:py-20 lg:py-24 border-t border-surface-alt" style={{ zIndex: 1 }}>
         <div className="section-container">
           {/* Section Header */}
           <motion.div
@@ -568,7 +582,7 @@ export default function LandingPage() {
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.08) 0%, rgba(220,38,38,0.06) 100%)' }}>
                   {benefit.icon}
                 </div>
-                
+
                 {/* Title */}
                 <h3 className="text-base text-ink tracking-tight font-semibold"
                   style={{ fontFamily: 'var(--font-display)' }}>
@@ -586,10 +600,10 @@ export default function LandingPage() {
       </section>
 
       {/* ── Contact Us Section — Two Column Layout ────────────────── */}
-      <section id="contact" className="relative py-24 border-t border-surface-alt" style={{ zIndex: 1 }}>
+      <section id="contact" className="relative py-16 sm:py-20 lg:py-24 border-t border-surface-alt" style={{ zIndex: 1, scrollMarginTop: '80px' }}>
         <div className="section-container">
           <motion.div
-            className="grid lg:grid-cols-2 gap-16 items-start"
+            className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-start"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
@@ -631,7 +645,7 @@ export default function LandingPage() {
                   {
                     icon: '▭',
                     q: 'How does the skill analysis work?',
-                    a: 'Our AI analyzes your resume against 13,896 skills using ESCO framework to provide precise, data-driven insights.'
+                    a: 'Our AI analyzes your resume against 13,896 skills using our proprietary intelligence engine to provide precise, data-driven insights.'
                   },
                   {
                     icon: '◬',
@@ -695,7 +709,7 @@ export default function LandingPage() {
                 boxShadow: '0 24px 48px rgba(15, 23, 42, 0.06), 0 8px 20px rgba(0, 194, 203, 0.08), inset 0 1px 0 rgba(255,255,255,0.95)'
               }}
             >
-              <form 
+              <form
                 onSubmit={async (e) => {
                   e.preventDefault();
                   setFormLoading(true);
@@ -711,7 +725,7 @@ export default function LandingPage() {
                       message: formData.message
                     };
 
-                    const response = await fetch('http://localhost:8000/api/contact/submit', {
+                    const response = await fetch('/api/contact/submit', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify(payload)
@@ -888,7 +902,7 @@ export default function LandingPage() {
                     ✕ {formMessage}
                   </motion.div>
                 )}
-                
+
                 {/* Privacy Note */}
                 <p className="text-xs text-slate-400 text-center pt-2 font-medium">
                   Your information is secure and will never be shared.
@@ -900,10 +914,10 @@ export default function LandingPage() {
       </section>
 
       {/* ── Bottom CTA ───────────────────────────────────────────── */}
-      <section className="relative py-24" style={{ zIndex: 1 }}>
+      <section className="relative py-16 sm:py-20 lg:py-24" style={{ zIndex: 1 }}>
         <div className="section-container">
           <motion.div
-            className="relative overflow-hidden rounded-2xl p-12 md:p-16 text-center flex flex-col items-center gap-6"
+            className="relative overflow-hidden rounded-2xl p-8 sm:p-12 md:p-16 text-center flex flex-col items-center gap-6"
             style={{
               background: 'linear-gradient(135deg, #1a2027 0%, #232B32 50%, #1a2027 100%)',
               boxShadow: '0 30px 60px -12px rgba(0,0,0,0.2)',
@@ -931,9 +945,9 @@ export default function LandingPage() {
               It takes 30 seconds. No sign-up required. Just upload your resume
               and select a target role.
             </p>
-            <div className="flex flex-col md:flex-row items-center gap-4 mt-2">
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 mt-2 w-full sm:w-auto">
               <Link to="/signup"
-                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-base font-semibold text-[#232B32] transition-all hover:-translate-y-1 no-underline w-full md:w-auto justify-center"
+                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-base font-semibold text-[#232B32] transition-all hover:-translate-y-1 no-underline w-full sm:w-auto justify-center"
                 style={{ background: '#00C2CB', boxShadow: '0 6px 24px rgba(0,194,203,0.4), 0 0 40px rgba(0,194,203,0.15)' }}>
                 Get Started Free
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -941,11 +955,11 @@ export default function LandingPage() {
                 </svg>
               </Link>
               <Link to="/demo"
-                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-base font-semibold text-white/80 border border-white/15 hover:border-white/30 hover:text-white transition-all no-underline w-full md:w-auto justify-center">
+                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-base font-semibold text-white/80 border border-white/15 hover:border-white/30 hover:text-white transition-all no-underline w-full sm:w-auto justify-center">
                 Try Demo First
               </Link>
               <Link to="/signin"
-                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-base font-semibold text-white/80 border border-white/15 hover:border-white/30 hover:text-white transition-all no-underline w-full md:w-auto justify-center">
+                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-base font-semibold text-white/80 border border-white/15 hover:border-white/30 hover:text-white transition-all no-underline w-full sm:w-auto justify-center">
                 Already have account?
               </Link>
             </div>
@@ -953,126 +967,309 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Enhanced Footer ──────────────────────────────────────── */}
-      <footer className="relative" style={{ zIndex: 1 }}>
-        {/* Gradient top border */}
-        <div className="h-px w-full" style={{ background: 'linear-gradient(90deg, transparent, rgba(0,194,203,0.3), rgba(139,92,246,0.2), transparent)' }} />
+      {/* ── Premium Wave Footer ─────────────────────────────────── */}
+      {/* Animated SVG Wave Separator */}
+      <div className="relative" style={{ zIndex: 2, marginBottom: '-2px' }}>
+        <svg
+          className="w-full block"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 1440 120"
+          preserveAspectRatio="none"
+          style={{ height: 'clamp(60px, 8vw, 120px)' }}
+        >
+          <defs>
+            <linearGradient id="waveGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="rgba(0,194,203,0.12)" />
+              <stop offset="50%" stopColor="rgba(139,92,246,0.08)" />
+              <stop offset="100%" stopColor="rgba(59,130,246,0.1)" />
+            </linearGradient>
+            <linearGradient id="waveGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="rgba(59,130,246,0.08)" />
+              <stop offset="50%" stopColor="rgba(0,194,203,0.1)" />
+              <stop offset="100%" stopColor="rgba(139,92,246,0.06)" />
+            </linearGradient>
+          </defs>
+          {/* Wave layer 1 — slowest, back */}
+          <path fill="url(#waveGrad1)" d="M0,60 C360,120 720,0 1080,60 C1260,90 1380,30 1440,60 L1440,120 L0,120 Z">
+            <animate attributeName="d" dur="8s" repeatCount="indefinite" values="
+              M0,60 C360,120 720,0 1080,60 C1260,90 1380,30 1440,60 L1440,120 L0,120 Z;
+              M0,80 C360,20 720,100 1080,40 C1260,20 1380,70 1440,50 L1440,120 L0,120 Z;
+              M0,60 C360,120 720,0 1080,60 C1260,90 1380,30 1440,60 L1440,120 L0,120 Z
+            " />
+          </path>
+          {/* Wave layer 2 — medium */}
+          <path fill="url(#waveGrad2)" d="M0,80 C480,30 960,110 1440,70 L1440,120 L0,120 Z">
+            <animate attributeName="d" dur="6s" repeatCount="indefinite" values="
+              M0,80 C480,30 960,110 1440,70 L1440,120 L0,120 Z;
+              M0,50 C480,100 960,30 1440,80 L1440,120 L0,120 Z;
+              M0,80 C480,30 960,110 1440,70 L1440,120 L0,120 Z
+            " />
+          </path>
+          {/* Wave layer 3 — fastest, front — dark fill to blend into footer */}
+          <path fill="#0f1419" d="M0,90 C240,60 480,110 720,85 C960,60 1200,100 1440,80 L1440,120 L0,120 Z">
+            <animate attributeName="d" dur="4s" repeatCount="indefinite" values="
+              M0,90 C240,60 480,110 720,85 C960,60 1200,100 1440,80 L1440,120 L0,120 Z;
+              M0,75 C240,100 480,65 720,90 C960,110 1200,70 1440,90 L1440,120 L0,120 Z;
+              M0,90 C240,60 480,110 720,85 C960,60 1200,100 1440,80 L1440,120 L0,120 Z
+            " />
+          </path>
+        </svg>
+      </div>
+
+      <footer className="relative overflow-hidden" style={{ zIndex: 1, background: '#0f1419' }}>
+        {/* Floating animated orbs */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <motion.div
+            className="absolute w-[400px] h-[400px] rounded-full"
+            style={{ background: 'radial-gradient(circle, rgba(0,194,203,0.07) 0%, transparent 70%)', top: '-10%', left: '-5%' }}
+            animate={{ x: [0, 40, 0], y: [0, 30, 0], scale: [1, 1.15, 1] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          <motion.div
+            className="absolute w-[350px] h-[350px] rounded-full"
+            style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.05) 0%, transparent 70%)', bottom: '-15%', right: '-5%' }}
+            animate={{ x: [0, -30, 0], y: [0, -25, 0], scale: [1, 1.1, 1] }}
+            transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        </div>
+
         {/* Footer Content */}
-        <div className="section-container py-16">
-          <div className="grid md:grid-cols-4 gap-12 mb-12">
-            {/* Brand Column */}
-            <div className="flex flex-col gap-4">
-              <Logo size="md" />
-              <p className="text-sm text-ink-secondary leading-relaxed">
-                AI-powered skill analysis empowering students and recruiters with data-driven clarity.
+        <div className="section-container relative py-12 sm:py-16 lg:py-20">
+
+          {/* Main Grid — Brand + Links */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 sm:gap-8 lg:gap-12 mb-14">
+
+            {/* Brand Column — centered on mobile */}
+            <motion.div
+              className="flex flex-col items-center text-center sm:items-start sm:text-left gap-5 sm:col-span-2 lg:col-span-1"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              {/* Logo with rounded background — matching login style */}
+              <div
+                className="rounded-2xl p-4 flex items-center justify-center"
+                style={{
+                  background: 'rgba(255,255,255,0.95)',
+                  boxShadow: '0 10px 30px rgba(0, 194, 203, 0.15), 0 4px 10px rgba(15, 23, 42, 0.08)',
+                  border: '1px solid rgba(0, 194, 203, 0.1)',
+                }}
+              >
+                <Logo size="md" />
+              </div>
+              <p className="text-sm leading-relaxed max-w-[260px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                AI-powered skill analysis empowering students and recruiters with data-driven career clarity.
               </p>
-              <div className="flex items-center gap-3 pt-2">
+              {/* Social Icons */}
+              <div className="flex items-center gap-2.5">
                 {[
-                  { icon: '𝕏', href: '#' },
-                  { icon: '🔗', href: '#' },
-                  { icon: '💼', href: '#' },
-                  { icon: '📘', href: '#' }
+                  {
+                    label: 'GitHub', icon: (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" /></svg>
+                    )
+                  },
+                  {
+                    label: 'LinkedIn', icon: (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
+                    )
+                  },
                 ].map((social, i) => (
-                  <a
+                  <motion.a
                     key={i}
-                    href={social.href}
-                    className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors text-ink-secondary hover:text-ink"
+                    href="#"
+                    aria-label={social.label}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center transition-all no-underline"
+                    style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}
+                    whileHover={{ scale: 1.1, y: -3, background: 'rgba(0,194,203,0.15)', color: '#00C2CB', borderColor: 'rgba(0,194,203,0.35)' }}
+                    transition={{ type: 'spring', stiffness: 400 }}
                   >
                     {social.icon}
-                  </a>
+                  </motion.a>
                 ))}
               </div>
-            </div>
+            </motion.div>
 
-            {/* Product Links */}
-            <div className="flex flex-col gap-4">
-              <h4 className="text-sm font-semibold text-ink">Product</h4>
-              <nav className="flex flex-col gap-2.5">
-                {['Features', 'Pricing', 'Security', 'Roadmap'].map((link) => (
-                  <a
-                    key={link}
-                    href="#"
-                    className="text-sm text-ink-secondary hover:text-ink transition-colors no-underline"
-                  >
-                    {link}
-                  </a>
-                ))}
-              </nav>
-            </div>
-
-            {/* Resources Links */}
-            <div className="flex flex-col gap-4">
-              <h4 className="text-sm font-semibold text-ink">Resources</h4>
-              <nav className="flex flex-col gap-2.5">
-                {['Documentation', 'Blog', 'API Docs', 'Careers'].map((link) => (
-                  <a
-                    key={link}
-                    href="#"
-                    className="text-sm text-ink-secondary hover:text-ink transition-colors no-underline"
-                  >
-                    {link}
-                  </a>
-                ))}
-              </nav>
-            </div>
-
-            {/* Legal Links */}
-            <div className="flex flex-col gap-4">
-              <h4 className="text-sm font-semibold text-ink">Company</h4>
-              <nav className="flex flex-col gap-2.5">
-                {['About', 'Contact', 'Privacy', 'Terms'].map((link) => (
-                  <a
-                    key={link}
-                    href="#"
-                    className="text-sm text-ink-secondary hover:text-ink transition-colors no-underline"
-                  >
-                    {link}
-                  </a>
-                ))}
-              </nav>
-            </div>
+            {/* Navigation Link Groups — centered on mobile */}
+            {[
+              {
+                title: 'Navigate',
+                links: [
+                  { label: 'Home', action: () => document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth' }) },
+                  { label: 'Features', action: () => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }) },
+                  { label: 'Benefits', action: () => document.getElementById('benefits')?.scrollIntoView({ behavior: 'smooth' }) },
+                  { label: 'Contact', action: () => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }) },
+                ],
+              },
+              {
+                title: 'Platform',
+                links: [
+                  { label: 'Get Started', href: '/signup' },
+                  { label: 'Sign In', href: '/signin' },
+                  { label: 'Demo', href: '/demo' },
+                ],
+              },
+              {
+                title: 'Built With',
+                links: [
+                  { label: 'FastAPI Backend', static: true },
+                  { label: 'React Frontend', static: true },
+                  { label: 'Python / ML', static: true },
+                  { label: 'MySQL Database', static: true },
+                ],
+              },
+            ].map((group, gi) => (
+              <motion.div
+                key={gi}
+                className="flex flex-col items-center text-center sm:items-start sm:text-left gap-4"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.1 * (gi + 1) }}
+              >
+                <h4 className="text-xs font-bold uppercase tracking-[0.2em]" style={{ color: '#00C2CB' }}>
+                  {group.title}
+                </h4>
+                <nav className="flex flex-col items-center sm:items-start gap-2.5">
+                  {group.links.map((link, li) =>
+                    link.href ? (
+                      <Link
+                        key={li}
+                        to={link.href}
+                        className="text-sm no-underline transition-all duration-200 flex items-center gap-2 group"
+                        style={{ color: 'rgba(255,255,255,0.65)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.transform = 'translateX(4px)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.65)'; e.currentTarget.style.transform = 'translateX(0)'; }}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full transition-all duration-200" style={{ background: '#00C2CB', opacity: 0.6 }} />
+                        {link.label}
+                      </Link>
+                    ) : link.action ? (
+                      <button
+                        key={li}
+                        onClick={link.action}
+                        className="text-sm text-left no-underline transition-all duration-200 flex items-center gap-2 group cursor-pointer bg-transparent border-none p-0"
+                        style={{ color: 'rgba(255,255,255,0.65)', fontFamily: 'inherit' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.transform = 'translateX(4px)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.65)'; e.currentTarget.style.transform = 'translateX(0)'; }}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full transition-all duration-200" style={{ background: '#00C2CB', opacity: 0.6 }} />
+                        {link.label}
+                      </button>
+                    ) : (
+                      <span
+                        key={li}
+                        className="text-sm flex items-center gap-2"
+                        style={{ color: 'rgba(255,255,255,0.45)' }}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'rgba(139,92,246,0.5)' }} />
+                        {link.label}
+                      </span>
+                    )
+                  )}
+                </nav>
+              </motion.div>
+            ))}
           </div>
 
-          {/* Newsletter Signup */}
+          {/* Newsletter — Glassmorphism Card */}
           <motion.div
-            className="py-8 px-6 rounded-xl mb-12"
-            style={{ background: 'linear-gradient(135deg, rgba(0,194,203,0.08) 0%, rgba(139,92,246,0.08) 100%)', border: '1px solid rgba(0,194,203,0.1)' }}
-            initial={{ y: 20, opacity: 0 }}
-            whileInView={{ y: 0, opacity: 1 }}
+            className="relative rounded-2xl p-6 sm:p-8 mb-12 overflow-hidden"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              backdropFilter: 'blur(12px)',
+            }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <div className="grid md:grid-cols-2 gap-8 items-center">
-              <div>
-                <h3 className="text-lg font-semibold text-ink mb-2">Stay updated</h3>
-                <p className="text-sm text-ink-secondary">
-                  Get insights on industry trends and career development tips delivered to your inbox.
+            <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full blur-3xl" style={{ background: 'rgba(0,194,203,0.1)' }} />
+            <div className="grid sm:grid-cols-2 gap-6 items-center relative z-10">
+              <div className="text-center sm:text-left">
+                <h3 className="text-lg font-bold text-white mb-1.5">Stay in the loop</h3>
+                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  Career insights and product updates — straight to your inbox.
                 </p>
               </div>
-              <form className="flex gap-2">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="flex-1 px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-ink placeholder:text-ink-muted focus:outline-none focus:border-cyan-500/50 transition-colors text-sm"
-                />
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 rounded-lg text-white font-semibold transition-all hover:scale-105 no-underline whitespace-nowrap"
-                  style={{
-                    background: 'linear-gradient(135deg, #00C2CB, #8B5CF6)',
-                    boxShadow: '0 2px 12px rgba(0,194,203,0.25)'
-                  }}
-                >
-                  Subscribe
-                </button>
+              <form className="flex flex-col gap-2" onSubmit={async (e) => {
+                e.preventDefault();
+                if (!nlEmail.trim()) return;
+                setNlLoading(true);
+                setNlStatus(null);
+                try {
+                  const res = await fetch('/api/newsletter/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: nlEmail }),
+                  });
+                  const data = await res.json();
+                  if (res.ok && data.success) {
+                    setNlStatus('success');
+                    setNlMessage(data.message || 'Subscribed successfully!');
+                    setNlEmail('');
+                  } else {
+                    setNlStatus('error');
+                    setNlMessage(data.detail || 'Something went wrong.');
+                  }
+                } catch {
+                  setNlStatus('error');
+                  setNlMessage('Network error. Please try again.');
+                } finally {
+                  setNlLoading(false);
+                }
+              }}>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    required
+                    value={nlEmail}
+                    onChange={(e) => setNlEmail(e.target.value)}
+                    placeholder="you@email.com"
+                    className="flex-1 px-4 py-2.5 rounded-xl text-sm text-white placeholder:text-white/30 focus:outline-none transition-all"
+                    style={{
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                    }}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(0,194,203,0.5)'; e.target.style.boxShadow = '0 0 0 3px rgba(0,194,203,0.1)'; }}
+                    onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none'; }}
+                    disabled={nlLoading}
+                  />
+                  <motion.button
+                    type="submit"
+                    disabled={nlLoading}
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap"
+                    style={{
+                      background: nlLoading ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #00C2CB 0%, #3B82F6 100%)',
+                      boxShadow: nlLoading ? 'none' : '0 4px 15px rgba(0,194,203,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
+                      opacity: nlLoading ? 0.7 : 1,
+                    }}
+                    whileHover={nlLoading ? {} : { scale: 1.03, boxShadow: '0 6px 20px rgba(0,194,203,0.4)' }}
+                    whileTap={nlLoading ? {} : { scale: 0.97 }}
+                  >
+                    {nlLoading ? 'Sending...' : 'Subscribe'}
+                  </motion.button>
+                </div>
+                {nlStatus && (
+                  <p className="text-xs font-medium mt-1" style={{ color: nlStatus === 'success' ? '#34d399' : '#f87171' }}>
+                    {nlMessage}
+                  </p>
+                )}
               </form>
             </div>
           </motion.div>
 
-          {/* Bottom Footer Bar */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-8 border-t border-surface-alt text-sm text-ink-secondary">
-            <span>© 2026 CareerLens. All rights reserved.</span>
-            <span>ESCO-powered skill intelligence for global careers</span>
+          {/* Bottom Bar */}
+          <div className="pt-8" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="flex flex-col items-center text-center gap-3 sm:flex-row sm:text-left sm:justify-between">
+              <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                © 2026 CareerLens. All rights reserved.
+              </span>
+              <span className="text-[0.65rem] leading-relaxed max-w-md" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                Career insights are generated using a combination of publicly available datasets and proprietary processing models.
+              </span>
+            </div>
           </div>
         </div>
       </footer>

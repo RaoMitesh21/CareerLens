@@ -3,11 +3,13 @@ app/routers/dashboard_state.py — Persist dashboard UI state per authenticated 
 """
 
 from datetime import datetime
-from typing import Any
+import json
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -22,13 +24,13 @@ MAX_STATE_BYTES = 1024 * 1024  # 1MB safety guard
 
 
 class DashboardStateUpsertRequest(BaseModel):
-    state: dict[str, Any] = Field(default_factory=dict)
+    state: Dict[str, Any] = Field(default_factory=dict)
 
 
 class DashboardStateResponse(BaseModel):
     scope: str
-    state: dict[str, Any]
-    updated_at: datetime | None = None
+    state: Dict[str, Any]
+    updated_at: Optional[datetime] = None
 
 
 def get_current_user(
@@ -92,9 +94,15 @@ def upsert_dashboard_state(
     db: Session = Depends(get_db),
 ):
     normalized_scope = validate_scope(scope)
+    normalized_state = request.state or {}
+
+    # Persist only JSON-serializable dictionaries to keep DB rows consistent.
+    try:
+        payload_bytes = len(json.dumps(normalized_state, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Dashboard state must be valid JSON object")
 
     # Guard oversized payloads.
-    payload_bytes = len(str(request.state).encode("utf-8"))
     if payload_bytes > MAX_STATE_BYTES:
         raise HTTPException(status_code=413, detail="Dashboard state payload too large")
 
@@ -104,17 +112,42 @@ def upsert_dashboard_state(
     ).first()
 
     if row:
-        row.state = request.state or {}
-        db.commit()
+        row.state = normalized_state
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise HTTPException(status_code=500, detail="Failed to save dashboard state")
         db.refresh(row)
         return DashboardStateResponse(scope=normalized_scope, state=row.state or {}, updated_at=row.updated_at)
 
     row = DashboardState(
         user_id=current_user.id,
         scope=normalized_scope,
-        state=request.state or {},
+        state=normalized_state,
     )
-    db.add(row)
-    db.commit()
-    db.refresh(row)
+    try:
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+    except IntegrityError:
+        # Concurrent insert race: fallback to update existing unique row.
+        db.rollback()
+        row = db.query(DashboardState).filter(
+            DashboardState.user_id == current_user.id,
+            DashboardState.scope == normalized_scope,
+        ).first()
+        if not row:
+            raise HTTPException(status_code=500, detail="Failed to save dashboard state")
+        row.state = normalized_state
+        try:
+            db.commit()
+            db.refresh(row)
+        except Exception:
+            db.rollback()
+            raise HTTPException(status_code=500, detail="Failed to save dashboard state")
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to save dashboard state")
+
     return DashboardStateResponse(scope=normalized_scope, state=row.state or {}, updated_at=row.updated_at)

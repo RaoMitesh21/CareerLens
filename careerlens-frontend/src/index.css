@@ -498,3 +498,69 @@
   50% { opacity: 0.9; }
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   RESPONSIVE DESIGN — Mobile / Tablet / Desktop
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Mobile (≤640px) ─────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .section-container {
+    padding: 0 1rem;
+  }
+
+  .glass-card {
+    border-radius: 1rem;
+  }
+
+  .glass-card:hover {
+    transform: none; /* Disable hover lift on mobile — no hover state */
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-dark {
+    padding: 0.625rem 1.5rem;
+    font-size: 0.8125rem;
+    min-height: 40px;
+    border-radius: 0.75rem;
+  }
+
+  .auth-glass-card {
+    border-radius: 1.25rem;
+    padding: 1.5rem !important;
+    margin: 0 0.25rem;
+  }
+
+  .auth-otp-box {
+    width: 2.75rem;
+    height: 3.25rem;
+    font-size: 1.25rem;
+  }
+
+  /* Reduce heavy shadows on mobile for performance */
+  .glass-panel,
+  .glass-card {
+    box-shadow:
+      0 2px 8px rgba(0,0,0,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.8);
+  }
+}
+
+/* ── Tablet (641px–1024px) ───────────────────────────────────────── */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .section-container {
+    padding: 0 1.5rem;
+  }
+
+  .glass-card:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* ── Large desktop (1440px+) ─────────────────────────────────────── */
+@media (min-width: 1440px) {
+  .section-container {
+    max-width: 1320px;
+  }
+}
+

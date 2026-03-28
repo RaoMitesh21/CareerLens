@@ -134,6 +134,31 @@ def _resolve_inference_mode() -> InferenceMode:
     return mode_map.get(mode_raw, InferenceMode.MOCK)
 
 
+def _normalize_target_role(target_role: str) -> str:
+    role = (target_role or "").strip()
+    key = role.lower()
+
+    alias_map = {
+        "full stack developer": "web developer",
+        "full-stack developer": "web developer",
+        "fullstack developer": "web developer",
+        "frontend developer": "web developer",
+        "front-end developer": "web developer",
+        "front end developer": "web developer",
+        "backend developer": "software developer",
+        "back-end developer": "software developer",
+        "back end developer": "software developer",
+        "sde": "software developer",
+    }
+
+    return alias_map.get(key, role)
+
+
+def _run_async_with_timeout(coro, timeout_seconds: float = 8.0):
+    """Run async enhancer work with an upper bound to avoid request hangs."""
+    return asyncio.run(asyncio.wait_for(coro, timeout=timeout_seconds))
+
+
 # ── Info ────────────────────────────────────────────────────────────
 @router.get("")
 def analyze_info():
@@ -173,9 +198,10 @@ def analyze_resume(
     Returns overall score (0-100), per-tier breakdowns, matched/missing
     skills, confidence details, and a human-readable summary.
     """
+    normalized_target = _normalize_target_role(request.target_occupation)
     result = advanced_analyze(
         resume_text=request.resume_text,
-        target_role=request.target_occupation,
+        target_role=normalized_target,
         db=db,
     )
     if "error" in result:
@@ -183,11 +209,12 @@ def analyze_resume(
 
     mode = _resolve_inference_mode()
     try:
-        result = asyncio.run(
+        result = _run_async_with_timeout(
             enhance_analysis_async(
                 base_analysis=result,
                 mode=mode,
-            )
+            ),
+            timeout_seconds=8.0,
         )
     except Exception:
         pass
@@ -210,9 +237,10 @@ def analyze_resume_hybrid(
     Additive hybrid endpoint that preserves ESCO as primary scoring while
     blending in O*NET alignment as a secondary signal.
     """
+    normalized_target = _normalize_target_role(request.target_occupation)
     base = advanced_analyze(
         resume_text=request.resume_text,
-        target_role=request.target_occupation,
+        target_role=normalized_target,
         db=db,
     )
     if "error" in base:
@@ -220,7 +248,7 @@ def analyze_resume_hybrid(
 
     onet = compute_onet_alignment(
         resume_text=request.resume_text,
-        target_role=request.target_occupation,
+        target_role=normalized_target,
         db=db,
     )
     fused = fuse_esco_onet_score(
@@ -250,9 +278,10 @@ def analyze_resume_hybrid_diagnostics(
     Debug-oriented hybrid endpoint for tuning and validation.
     Additive only: does not alter any existing endpoint behavior.
     """
+    normalized_target = _normalize_target_role(request.target_occupation)
     base = advanced_analyze(
         resume_text=request.resume_text,
-        target_role=request.target_occupation,
+        target_role=normalized_target,
         db=db,
     )
     if "error" in base:
@@ -260,7 +289,7 @@ def analyze_resume_hybrid_diagnostics(
 
     onet = compute_onet_alignment(
         resume_text=request.resume_text,
-        target_role=request.target_occupation,
+        target_role=normalized_target,
         db=db,
     )
     fused = fuse_esco_onet_score(
@@ -297,9 +326,10 @@ def analyze_with_roadmap(
     """
     Full analysis **plus** a personalised learning roadmap in one call.
     """
+    normalized_target = _normalize_target_role(request.target_occupation)
     result = advanced_analyze(
         resume_text=request.resume_text,
-        target_role=request.target_occupation,
+        target_role=normalized_target,
         db=db,
     )
     if "error" in result:
@@ -308,11 +338,12 @@ def analyze_with_roadmap(
     mode = _resolve_inference_mode()
 
     try:
-        result = asyncio.run(
+        result = _run_async_with_timeout(
             enhance_analysis_async(
                 base_analysis=result,
                 mode=mode,
-            )
+            ),
+            timeout_seconds=8.0,
         )
     except Exception:
         pass
@@ -326,12 +357,13 @@ def analyze_with_roadmap(
     )
 
     try:
-        roadmap = asyncio.run(
+        roadmap = _run_async_with_timeout(
             enhance_roadmap_async(
                 base_roadmap=roadmap,
                 role=result["role"],
                 mode=mode,
-            )
+            ),
+            timeout_seconds=8.0,
         )
     except Exception:
         # Fall back to deterministic roadmap if enhancement fails.
@@ -360,9 +392,10 @@ def analyze_resume_basic(
     db: Session = Depends(get_db),
 ):
     """Legacy v0.2 essential/optional weighted score."""
+    normalized_target = _normalize_target_role(request.target_occupation)
     result = calculate_esco_score(
         resume_text=request.resume_text,
-        target_role=request.target_occupation,
+        target_role=normalized_target,
         db=db,
     )
     if "error" in result:
@@ -407,6 +440,7 @@ def _analyze_batch_impl(
     Used by the Recruiter Dashboard to compare candidates automatically.
     """
     ranked: list[BatchCandidateResult] = []
+    normalized_target = _normalize_target_role(request.target_occupation)
 
     def _match_label(score: float) -> str:
         if score >= 75:
@@ -424,12 +458,25 @@ def _analyze_batch_impl(
         bonus: float,
         missing_count: int,
         total_required: int,
+        core_missing_count: int,
+        core_total_count: int,
     ) -> float:
-        # Heavily weight core alignment, then adjust for missing-skill load.
-        weighted = (0.55 * overall) + (0.30 * core) + (0.10 * secondary) + (0.05 * bonus)
+        # Recruiter-first ranking: prioritize core fit, then overall role alignment.
+        weighted = (0.62 * core) + (0.23 * overall) + (0.10 * secondary) + (0.05 * bonus)
+
         missing_ratio = (missing_count / total_required) if total_required > 0 else 0.0
-        penalty = min(20.0, missing_ratio * 22.0)
-        return max(0.0, min(100.0, weighted - penalty))
+        core_missing_ratio = (core_missing_count / core_total_count) if core_total_count > 0 else 0.0
+
+        # Penalize broad gaps and missing core requirements without collapsing
+        # mid-quality candidates to zero too aggressively.
+        breadth_penalty = min(8.0, missing_ratio * 8.0)
+        core_penalty = min(10.0, core_missing_ratio * 10.0)
+
+        # Boost when core coverage is meaningfully strong to stabilize top ordering.
+        core_coverage = 1.0 - core_missing_ratio if core_total_count > 0 else 0.0
+        core_boost = 8.0 * max(0.0, core_coverage - 0.35)
+
+        return max(0.0, min(100.0, weighted - breadth_penalty - core_penalty + core_boost))
 
     def _risk_level(core: float, missing_count: int, total_required: int) -> str:
         missing_ratio = (missing_count / total_required) if total_required > 0 else 0.0
@@ -449,48 +496,115 @@ def _analyze_batch_impl(
         return "Hold"
 
     for item in request.resumes:
+        resume_text = re.sub(r"\s+", " ", str(item.resume_text or "")).strip()[:12000]
+
         result = advanced_analyze(
-            resume_text=item.resume_text,
-            target_role=request.target_occupation,
+            resume_text=resume_text,
+            target_role=normalized_target,
             db=db,
         )
         if "error" in result:
-            # Skip unresolvable resumes silently; caller gets empty slot
+            # Hybrid mode fallback: keep candidate evaluable via O*NET when ESCO role mapping is weak.
+            if not use_hybrid:
+                continue
+
+            onet = compute_onet_alignment(
+                resume_text=resume_text,
+                target_role=normalized_target,
+                db=db,
+            )
+            if not bool(onet.get("available")):
+                continue
+
+            onet_score = float(onet.get("skill_match_score", 0.0))
+            onet_matched = _unique_keep_order(list(onet.get("matched_skills", [])))
+            onet_missing = _unique_keep_order(list(onet.get("missing_skills", [])))
+            onet_total = max(int(onet.get("total_skills", 0)), len(onet_matched) + len(onet_missing), 1)
+            onet_missing_ratio = len(onet_missing) / onet_total
+
+            fallback_core = round(onet_score, 1)
+            fallback_secondary = round(max(0.0, onet_score * 0.85), 1)
+            fallback_bonus = round(max(0.0, onet_score * 0.70), 1)
+            fallback_decision = max(
+                0.0,
+                min(
+                    100.0,
+                    (0.78 * onet_score) + (0.22 * fallback_core) - min(10.0, onet_missing_ratio * 12.0),
+                ),
+            )
+            fallback_risk = _risk_level(
+                core=fallback_core,
+                missing_count=len(onet_missing),
+                total_required=onet_total,
+            )
+            fallback_reco = _recommendation(fallback_decision, fallback_risk)
+            fallback_languages = _detect_languages_from_resume(resume_text)
+            fallback_language_matched = _unique_keep_order([s for s in onet_matched if s in fallback_languages])
+            fallback_language_missing = _unique_keep_order([s for s in onet_missing if s in fallback_languages])
+
+            ranked.append(
+                BatchCandidateResult(
+                    candidate_name=item.candidate_name or f"Candidate {len(ranked) + 1}",
+                    rank=0,
+                    overall_score=round(onet_score, 1),
+                    decision_score=round(fallback_decision, 1),
+                    core_match=fallback_core,
+                    secondary_match=fallback_secondary,
+                    bonus_match=fallback_bonus,
+                    matched_count=len(onet_matched),
+                    missing_count=len(onet_missing),
+                    skill_coverage_ratio=round((len(onet_matched) / onet_total) * 100, 1),
+                    match_label=_match_label(fallback_decision),
+                    risk_level=fallback_risk,
+                    recommendation=fallback_reco,
+                    comprehensive_classification=_comprehensive_classification(
+                        decision=fallback_decision,
+                        core=fallback_core,
+                        overall=onet_score,
+                        risk=fallback_risk,
+                    ),
+                    skill_classification={
+                        "core": {
+                            "matched": onet_matched[:25],
+                            "missing": onet_missing[:25],
+                        },
+                        "language": {
+                            "matched": fallback_language_matched,
+                            "missing": fallback_language_missing,
+                        },
+                        "other": {
+                            "matched": onet_matched[:25],
+                            "missing": onet_missing[:25],
+                        },
+                    },
+                    top_strengths=onet_matched[:4],
+                    top_gaps=onet_missing[:4],
+                )
+            )
             continue
 
         meta = result.get("meta", {})
         hybrid_overall_score = float(result["overall_score"])
+        onet_score = 0.0
+        onet_available = False
         if use_hybrid:
             onet = compute_onet_alignment(
-                resume_text=item.resume_text,
-                target_role=request.target_occupation,
+                resume_text=resume_text,
+                target_role=normalized_target,
                 db=db,
             )
+            onet_score = float(onet.get("skill_match_score", 0.0))
+            onet_available = bool(onet.get("available"))
             hybrid_overall_score = fuse_esco_onet_score(
                 esco_score=float(result.get("overall_score", 0.0)),
-                onet_score=float(onet.get("skill_match_score", 0.0)),
-                onet_available=bool(onet.get("available")),
+                onet_score=onet_score,
+                onet_available=onet_available,
             )
 
         matched_count = int(meta.get("total_matched", 0))
         missing_count = int(meta.get("total_missing", 0))
         total_required = max(int(meta.get("total_required_skills", 0)), matched_count + missing_count)
         coverage_ratio = round((matched_count / total_required) * 100, 1) if total_required > 0 else 0.0
-        decision_score = _decision_score(
-            overall=hybrid_overall_score,
-            core=float(result["core_match"]),
-            secondary=float(result["secondary_match"]),
-            bonus=float(result["bonus_match"]),
-            missing_count=missing_count,
-            total_required=total_required,
-        )
-        risk_level = _risk_level(
-            core=float(result["core_match"]),
-            missing_count=missing_count,
-            total_required=total_required,
-        )
-        recommendation = _recommendation(decision_score, risk_level)
-
         matched_core = _unique_keep_order(list(result.get("_matched_core", [])))
         matched_secondary = _unique_keep_order(list(result.get("_matched_secondary", [])))
         matched_bonus = _unique_keep_order(list(result.get("_matched_bonus", [])))
@@ -498,6 +612,29 @@ def _analyze_batch_impl(
         missing_core = _unique_keep_order(list(result.get("_missing_core", [])))
         missing_secondary = _unique_keep_order(list(result.get("_missing_secondary", [])))
         missing_bonus = _unique_keep_order(list(result.get("_missing_bonus", [])))
+
+        core_total_count = len(matched_core) + len(missing_core)
+        decision_core_score = float(result["core_match"])
+        if use_hybrid and onet_available:
+            # Stabilize hybrid ranking when ESCO core signal is sparse/noisy.
+            decision_core_score = (0.85 * float(result["core_match"])) + (0.15 * onet_score)
+
+        decision_score = _decision_score(
+            overall=hybrid_overall_score,
+            core=decision_core_score,
+            secondary=float(result["secondary_match"]),
+            bonus=float(result["bonus_match"]),
+            missing_count=missing_count,
+            total_required=total_required,
+            core_missing_count=len(missing_core),
+            core_total_count=core_total_count,
+        )
+        risk_level = _risk_level(
+            core=float(result["core_match"]),
+            missing_count=missing_count,
+            total_required=total_required,
+        )
+        recommendation = _recommendation(decision_score, risk_level)
 
         all_matched = _unique_keep_order(matched_core + matched_secondary + matched_bonus)
 
@@ -538,7 +675,7 @@ def _analyze_batch_impl(
                 matched_count=matched_count,
                 missing_count=missing_count,
                 skill_coverage_ratio=coverage_ratio,
-                match_label=_match_label(hybrid_overall_score),
+                match_label=_match_label(decision_score),
                 risk_level=risk_level,
                 recommendation=recommendation,
                 comprehensive_classification=comprehensive,

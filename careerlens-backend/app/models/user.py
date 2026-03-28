@@ -166,6 +166,15 @@ class RecruiterShortlist(Base):
     """A recruiter-saved shortlist entry for one role and candidate."""
 
     __tablename__ = "recruiter_shortlists"
+    __table_args__ = (
+        UniqueConstraint(
+            "recruiter_id",
+            "role_title",
+            "candidate_name",
+            "analysis_mode",
+            name="uq_shortlist_recruiter_role_candidate_mode",
+        ),
+    )
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     recruiter_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, index=True)

@@ -1,59 +1,59 @@
 """
-app/core/turso_dialect.py — Custom Turso/Hrana Dialect for SQLAlchemy
-=====================================================================
-Custom SQLAlchemy dialect that disables PRAGMA detection for Turso compatibility.
+app/core/turso_dialect.py — Custom Turso Dialect for SQLAlchemy
+===============================================================
+Uses our custom pure-Python `turso_dbapi.py` wrapper around `libsql-client`.
 """
 
-from sqlalchemy.dialects.sqlite.base import SQLiteDialect
-from sqlalchemy_libsql import SQLiteDialect_libsql
+from sqlalchemy.dialects.sqlite.pysqlite import SQLiteDialect_pysqlite
+from sqlalchemy.engine.default import DefaultDialect
 
+class SQLiteDialect_Turso(SQLiteDialect_pysqlite):
+    name = "turso"
+    driver = "libsql_client"
+    
+    # We must explicitly set this for SQLAlchemy 1.4/2.0
+    supports_statement_cache = True
+    
+    @classmethod
+    def import_dbapi(cls):
+        import app.core.turso_dbapi as turso_dbapi
+        return turso_dbapi
 
-class SQLiteDialect_Turso(SQLiteDialect_libsql):
-    """
-    Custom libsql dialect optimized for Turso.
-    Disables PRAGMA execution that Turso/Hrana rejects.
-    """
-    
-    def initialize(self, connection):
-        """Override to skip isolation level detection that uses PRAGMA."""
-        # Call parent initialize but catch PRAGMA errors
-        try:
-            super().initialize(connection)
-        except Exception as e:
-            if "PRAGMA" in str(e) or "405" in str(e):
-                # Skip PRAGMA initialization - Turso doesn't support these
-                self.server_version_info = None
-                self.default_isolation_level = None
-            else:
-                raise
-    
+    def on_connect(self):
+        # Disable the default SQLite on_connect which tries to run PRAGMAs
+        def connect(conn):
+            pass
+        return connect
+
     def get_isolation_level(self, dbapi_conn):
-        """Override to disable PRAGMA read_uncommitted check."""
-        # Return None to disable isolation level checking
         return None
-    
+
     def get_default_isolation_level(self, dbapi_conn):
-        """Override to disable PRAGMA read_uncommitted check."""
-        # Return None - Turso doesn't support isolation level detection
         return None
-    
-    def has_table(self, connection, table_name, schema=None):
-        """Override to avoid PRAGMA table_info."""
-        # Query sqlite_master table instead of using PRAGMA
-        statement = (
-            "SELECT name FROM sqlite_master WHERE type='table' AND name=?"
-        )
+
+    def has_table(self, connection, table_name, schema=None, **kw):
+        statement = "SELECT name FROM sqlite_master WHERE type='table' AND name=?"
         cursor = connection.exec_driver_sql(statement, (table_name,))
         return cursor.fetchone() is not None
-    
-    def _get_table_pragma(self, connection, pragmaname, table_name=None, schema=None):
-        """Override to skip PRAGMA commands that aren't supported."""
-        # Return empty list instead of executing PRAGMA
-        # This prevents table introspection errors
-        return []
-    
-    def _get_column_info(self, connection, table_name, schema=None):
-        """Override to skip table_info PRAGMA."""
-        # We can't reliably get column info, so return empty
-        return {}
 
+    def create_connect_args(self, url):
+        # URL is: sqlite+libsql://...
+        # Clean up the prefix
+        url_full = str(url)
+        if url_full.startswith("sqlite+https://"):
+            actual_url = url_full.replace("sqlite+https://", "https://")
+        elif url_full.startswith("sqlite+libsql://"):
+            actual_url = url_full.replace("sqlite+libsql://", "https://")
+        elif url_full.startswith("turso://"):
+            actual_url = url_full.replace("turso://", "https://")
+        elif url_full.startswith("libsql://"):
+            actual_url = url_full.replace("libsql://", "https://")
+        else:
+            actual_url = url_full
+            
+        kwargs = {
+            "database": actual_url
+        }
+        return ([], kwargs)
+
+dialect = SQLiteDialect_Turso

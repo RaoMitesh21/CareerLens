@@ -4,11 +4,20 @@
    All backend communication lives here. No fetch() calls elsewhere.
    ═══════════════════════════════════════════════════════════════════ */
 
-// Use environment variable for production, fallback to relative path for development
-const API_BASE_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
-  ? '/api' 
-  : (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000');
-const API_BASE = API_BASE_URL.endsWith('/api') ? API_BASE_URL : `${API_BASE_URL}/api`;
+function resolveApiBaseUrl() {
+  const envUrl = (import.meta.env.VITE_API_URL || '').trim();
+  const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+
+  // Route through Vite proxy in local development to avoid CORS issues.
+  if (isLocalhost) {
+    return '/api';
+  }
+
+  return envUrl || 'http://127.0.0.1:8012';
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
+const API_BASE = API_BASE_URL;
 const DEFAULT_ANALYSIS_MODE = 'esco';
 
 function normalizeAnalysisMode(mode) {

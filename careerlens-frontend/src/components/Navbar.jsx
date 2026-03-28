@@ -50,10 +50,13 @@ export default function Navbar() {
   const scrollToSection = (sectionId) => {
     setMobileMenuOpen(false);
     if (isLandingPage) {
-      const element = document.getElementById(sectionId);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+      // Delay scroll slightly so mobile menu closing animation completes
+      setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 350);
     }
   };
 
@@ -71,8 +74,15 @@ export default function Navbar() {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
       className="fixed top-0 left-0 right-0 z-50"
+      style={{
+        background: 'rgba(255, 255, 255, 0.85)',
+        backdropFilter: 'blur(16px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+        borderBottom: '1px solid rgba(0,0,0,0.04)',
+        boxShadow: '0 1px 8px rgba(0,0,0,0.03)',
+      }}
     >
-      <nav className="section-container flex items-center justify-between py-4">
+      <nav className="section-container flex items-center justify-between py-3 sm:py-4">
         {/* Logo */}
         <Link to="/" className="flex items-center no-underline">
           <Logo size="lg" />
@@ -181,8 +191,8 @@ export default function Navbar() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="md:hidden border-t border-surface-alt"
-            style={{ background: 'rgba(35, 43, 50, 0.8)', backdropFilter: 'blur(8px)' }}
+            className="md:hidden border-t border-slate-100"
+            style={{ background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}
           >
             <div className="section-container py-4 flex flex-col gap-2">
               {navLinks.map((link, idx) => {
@@ -200,9 +210,9 @@ export default function Navbar() {
                         onClick={() => scrollToSection(link.section)}
                         className={`
                           w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium no-underline transition-all border-none bg-transparent cursor-pointer
-                          ${isActive ? 'text-white' : 'text-ink-secondary hover:text-ink hover:bg-white/5'}
+                          ${isActive ? 'text-cyan-700 font-semibold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'}
                         `}
-                        style={isActive ? { background: 'rgba(0, 194, 203, 0.2)', color: '#00C2CB' } : {}}
+                        style={isActive ? { background: 'rgba(0, 194, 203, 0.1)', color: '#0891b2' } : {}}
                       >
                         {link.label}
                       </button>
@@ -213,8 +223,8 @@ export default function Navbar() {
                         className={`
                           block px-4 py-2.5 rounded-lg text-sm font-medium no-underline transition-colors
                           ${location.pathname === link.to
-                            ? 'text-white' 
-                            : 'text-ink-secondary hover:text-ink hover:bg-white/5'
+                            ? 'text-cyan-700 font-semibold'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                           }
                         `}
                         style={location.pathname === link.to ? { background: 'rgba(0, 194, 203, 0.1)' } : {}}
@@ -226,7 +236,7 @@ export default function Navbar() {
                 );
               })}
               <motion.div 
-                className="pt-2 border-t border-white/10"
+                className="pt-2 border-t border-slate-100"
                 initial={{ y: 10, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}

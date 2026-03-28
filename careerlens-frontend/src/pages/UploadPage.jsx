@@ -230,7 +230,7 @@ export default function UploadPage() {
           </div>
 
           {/* Glass Card */}
-          <div className="glass-card p-8 flex flex-col gap-6">
+          <div className="glass-card p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
 
             {/* ── Drop Zone ─────────────────────────────────────── */}
             <div
@@ -413,7 +413,7 @@ export default function UploadPage() {
           </div>
 
           {/* ── Tips ──────────────────────────────────────────────── */}
-          <div className="mt-6 grid grid-cols-3 gap-4 text-center">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
             {[
               { icon: '📄', text: 'Upload PDF, DOCX, or TXT' },
               { icon: '🎯', text: 'Enter exact role name' },

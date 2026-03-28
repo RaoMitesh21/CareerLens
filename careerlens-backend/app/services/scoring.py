@@ -25,7 +25,7 @@ required skills (50-150), NOT all 13,896 ESCO skills.
 from __future__ import annotations
 
 import math
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set, Tuple
 from sqlalchemy.orm import Session
 
 from app.models.esco import Occupation, OccupationSkill, Skill
@@ -58,6 +58,10 @@ _GENERIC_RELAX_EXCLUSIONS = {
     "services", "engineer", "developer", "information", "microsoft", "company",
     "purpose", "physical", "reasoning", "mobile", "shell", "shells",
 }
+
+
+# Process-level cache: target role -> (resolved role label, classified skills, required skill ids).
+_ROLE_PROFILE_CACHE: Dict[str, Tuple[str, List[ClassifiedSkill], Set[int]]] = {}
 
 
 def _normalize_text(value: str) -> str:
@@ -135,6 +139,43 @@ def _resolve_occupation(target_role: str, db: Session) -> Optional[Occupation]:
     return best
 
 
+def _get_role_profile(
+    target_role: str,
+    db: Session,
+) -> Tuple[Optional[Tuple[str, List[ClassifiedSkill], Set[int]]], Optional[str]]:
+    """
+    Resolve and cache role metadata needed for resume scoring.
+    Returns (profile, error_message).
+    """
+    target_norm = _normalize_text(target_role)
+    if not target_norm:
+        return None, f"Role '{target_role}' not found in ESCO database"
+
+    cached = _ROLE_PROFILE_CACHE.get(target_norm)
+    if cached is not None:
+        return cached, None
+
+    occupation = _resolve_occupation(target_norm, db)
+    if not occupation:
+        return None, f"Role '{target_role}' not found in ESCO database"
+
+    relations = (
+        db.query(OccupationSkill, Skill)
+        .join(Skill, OccupationSkill.skill_id == Skill.id)
+        .filter(OccupationSkill.occupation_id == occupation.id)
+        .all()
+    )
+    if not relations:
+        return None, f"No skill data for '{occupation.preferred_label}'"
+
+    classified = classify_occupation_skills(relations)
+    required_ids = {c.skill_id for c in classified}
+
+    profile = (occupation.preferred_label, classified, required_ids)
+    _ROLE_PROFILE_CACHE[target_norm] = profile
+    return profile, None
+
+
 def _is_confident_match(
     classified_skill: ClassifiedSkill,
     confidences: Dict[int, SkillConfidence],
@@ -156,6 +197,66 @@ def _is_confident_match(
             threshold = max(0.18, threshold - 0.03)
 
     return conf.confidence >= threshold
+
+
+def _infer_foundational_matches(
+    classified: List[ClassifiedSkill],
+    resume_text: str,
+    matched_ids: set[int],
+    confidences: Dict[int, SkillConfidence],
+) -> None:
+    """
+    Infer a few foundational ESCO skills from strong concrete tech evidence.
+    This reduces false negatives where resumes mention tools/languages but not
+    umbrella labels like "computer programming".
+    """
+    text = _normalize_text(resume_text)
+    if not text:
+        return
+
+    has_programming = any(token in text for token in [
+        "javascript", "typescript", "python", "java", "c#", "c++", "php",
+        "ruby", "go", "swift", "kotlin", "node", "react", "angular", "vue",
+    ])
+    has_markup = any(token in text for token in ["html", "css", "sass", "less", "tailwind"])
+    has_web_stack = any(token in text for token in ["react", "angular", "vue", "next", "node", "express", "frontend", "backend"])
+    has_debug = any(token in text for token in ["debug", "debugging", "bug", "testing", "test cases", "troubleshoot"])
+    has_query = any(token in text for token in ["sql", "query", "mysql", "postgres", "mongodb", "database"])
+    in_project_context = any(token in text for token in ["project", "experience", "internship", "work"])
+
+    for skill in classified:
+        if skill.skill_id in matched_ids:
+            continue
+
+        label_norm = _normalize_text(skill.label)
+        inferred = False
+
+        if "computer programming" in label_norm and has_programming:
+            inferred = True
+        elif "web programming" in label_norm and has_programming and (has_markup or has_web_stack):
+            inferred = True
+        elif "use markup languages" in label_norm and has_markup:
+            inferred = True
+        elif "implement front-end website design" in label_norm and (has_markup or has_web_stack):
+            inferred = True
+        elif ("debug software" in label_norm or "ict debugging tools" in label_norm) and has_debug:
+            inferred = True
+        elif "use query languages" in label_norm and has_query:
+            inferred = True
+
+        if not inferred:
+            continue
+
+        matched_ids.add(skill.skill_id)
+        confidences[skill.skill_id] = SkillConfidence(
+            skill_id=skill.skill_id,
+            label=skill.label,
+            raw_count=1,
+            in_project_section=in_project_context,
+            freq_score=0.35,
+            context_score=1.0 if in_project_context else 0.3,
+            confidence=0.56 if skill.tier == SkillTier.CORE else 0.5,
+        )
 
 
 # ── Per-Tier Sub-Score ──────────────────────────────────────────────
@@ -269,12 +370,14 @@ def advanced_analyze(
     Full Jobscan-level resume analysis.
     Returns the professional JSON structure or {"error": "..."}.
     """
-    # 1. Resolve occupation
-    occupation = _resolve_occupation(target_role, db)
-    if not occupation:
-        return {"error": f"Role '{target_role}' not found in ESCO database"}
+    # 1. Resolve occupation and cached role profile for this target role.
+    role_profile, role_error = _get_role_profile(target_role, db)
+    if role_error or role_profile is None:
+        return {"error": role_error or f"Role '{target_role}' not found in ESCO database"}
 
-    calibration = get_scoring_profile_for_role(occupation.preferred_label)
+    resolved_role, classified, required_ids = role_profile
+
+    calibration = get_scoring_profile_for_role(resolved_role)
     role_terms = set(calibration.get("core_terms", []))
     conf_cfg = calibration.get("confidence_thresholds", {})
     min_confidence_by_tier: Dict[SkillTier, float] = {
@@ -283,30 +386,24 @@ def advanced_analyze(
         SkillTier.BONUS: float(conf_cfg.get("bonus", _MIN_CONFIDENCE_BY_TIER[SkillTier.BONUS])),
     }
 
-    # 2. Fetch all occupation→skill relations
-    relations = (
-        db.query(OccupationSkill, Skill)
-        .join(Skill, OccupationSkill.skill_id == Skill.id)
-        .filter(OccupationSkill.occupation_id == occupation.id)
-        .all()
-    )
-    if not relations:
-        return {"error": f"No skill data for '{occupation.preferred_label}'"}
+    # 2. Role-specific skills are preloaded/cached in role_profile.
 
-    # 3. Classify into 3 tiers
-    classified = classify_occupation_skills(relations)
-
-    # 4. Extract ONLY the required skill IDs for scoped matching
-    required_ids = {c.skill_id for c in classified}
-
-    # 5. Match resume against ONLY the required skills (not all 13,896!)
+    # 3. Match resume against ONLY the required skills (not all 13,896!)
     matched_ids, confidences, keyword_map = match_skills_in_resume(
         resume_text=resume_text,
         required_skill_ids=required_ids,
         db=db,
     )
 
-    # 6. Separate matched vs missing with confidence threshold per tier.
+    # Improve practical recall for role-foundation skills from concrete evidence.
+    _infer_foundational_matches(
+        classified=classified,
+        resume_text=resume_text,
+        matched_ids=matched_ids,
+        confidences=confidences,
+    )
+
+    # 4. Separate matched vs missing with confidence threshold per tier.
     matched_classified = [
         c for c in classified
         if c.skill_id in matched_ids and _is_confident_match(c, confidences, min_confidence_by_tier, role_terms)
@@ -314,12 +411,12 @@ def advanced_analyze(
     matched_ids = {c.skill_id for c in matched_classified}
     missing_classified = [c for c in classified if c.skill_id not in matched_ids]
 
-    # 7. Per-tier sub-scores
+    # 5. Per-tier sub-scores
     core_match = _tier_score(classified, matched_ids, confidences, SkillTier.CORE)
     secondary_match = _tier_score(classified, matched_ids, confidences, SkillTier.SECONDARY)
     bonus_match = _tier_score(classified, matched_ids, confidences, SkillTier.BONUS)
 
-    # 8. Overall score: weighted blend from calibrated role profile.
+    # 6. Overall score: weighted blend from calibrated role profile.
     weight_cfg = calibration.get("weights", {})
     core_weight = float(weight_cfg.get("core", TIER_CORE_WEIGHT))
     secondary_weight = float(weight_cfg.get("secondary", TIER_SECONDARY_WEIGHT))
@@ -344,14 +441,14 @@ def advanced_analyze(
     )
     overall_score = round(max(0.0, min(100.0, overall_raw)), 1)
 
-    # 9. Strengths = matched core skills + high-confidence matched skills
+    # 7. Strengths = matched core skills + high-confidence matched skills
     strengths = []
     for c in matched_classified:
         conf = confidences.get(c.skill_id)
         if c.tier == SkillTier.CORE or (conf and conf.confidence >= 0.5):
             strengths.append(c.label)
 
-    # 10. Structured matched / missing skill lists
+    # 8. Structured matched / missing skill lists
     matched_skills = [c.label for c in matched_classified]
     missing_skills = [c.label for c in missing_classified]
 
@@ -364,22 +461,22 @@ def advanced_analyze(
     missing_secondary = [c.label for c in missing_classified if c.tier == SkillTier.SECONDARY]
     missing_bonus = [c.label for c in missing_classified if c.tier == SkillTier.BONUS]
 
-    # 11. Improvement priorities
+    # 9. Improvement priorities
     improvement_priority = _rank_improvement_priorities(missing_classified)
 
-    # 12. Summary
+    # 10. Summary
     summary = _generate_summary(
         overall=overall_score,
         core_pct=core_match,
         secondary_pct=secondary_match,
         n_strengths=len(strengths),
         n_missing_core=len(missing_core),
-        role=occupation.preferred_label,
+        role=resolved_role,
     )
 
     # 13. Assemble response
     return {
-        "role": occupation.preferred_label,
+        "role": resolved_role,
         "overall_score": overall_score,
         "core_match": core_match,
         "secondary_match": secondary_match,

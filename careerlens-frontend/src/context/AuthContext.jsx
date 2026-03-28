@@ -3,6 +3,18 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 // Create Auth Context
 const AuthContext = createContext();
 
+function resolveAuthApiBaseUrl() {
+  const envUrl = (import.meta.env.VITE_API_URL || '').trim();
+  const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+
+  // Use Vite proxy in local dev to avoid CORS and port drift entirely.
+  if (isLocalhost) {
+    return '/api';
+  }
+
+  return envUrl || 'http://127.0.0.1:8012';
+}
+
 // Auth Provider Component
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -14,7 +26,7 @@ export const AuthProvider = ({ children }) => {
   const [successMessage, setSuccessMessage] = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const API_BASE_URL = resolveAuthApiBaseUrl();
 
   // Initialize from localStorage on mount
   useEffect(() => {

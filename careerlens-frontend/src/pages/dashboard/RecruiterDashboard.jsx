@@ -146,6 +146,33 @@ function splitIntoChunks(items = [], chunkSize = 10) {
   return chunks;
 }
 
+function sanitizeResumeText(value = '', maxChars = 12000) {
+  const collapsed = String(value || '').replace(/\s+/g, ' ').trim();
+  return collapsed.length > maxChars ? collapsed.slice(0, maxChars) : collapsed;
+}
+
+async function runChunkedBatches(payloadChunks, targetRole, mode, onChunkDone) {
+  const concurrency = 3;
+  const all = [];
+
+  for (let i = 0; i < payloadChunks.length; i += concurrency) {
+    const window = payloadChunks.slice(i, i + concurrency);
+    const responses = await Promise.all(
+      window.map((chunk) => batchAnalyzeResumes(chunk, targetRole, mode))
+    );
+
+    responses.forEach((result) => {
+      all.push(...(result?.candidates || []));
+    });
+
+    if (onChunkDone) {
+      onChunkDone(Math.min(payloadChunks.length, i + window.length));
+    }
+  }
+
+  return all;
+}
+
 function rankBatchCandidates(candidates = [], mode = 'esco') {
   const normalizedMode = String(mode || '').toLowerCase() === 'hybrid' ? 'hybrid' : 'esco';
 
@@ -225,15 +252,17 @@ async function parseCandidateCsv(file) {
   const failures = [];
 
   rows.forEach((row, index) => {
-    const resumeText = String(row?.[resumeKey] || '').trim();
+    const rawResumeText = String(row?.[resumeKey] || '').trim();
     const rawName = String(nameKey ? row?.[nameKey] || '' : '').trim();
     const fallbackName = `Candidate ${index + 1}`;
-    const candidateName = rawName || parseResumeText(resumeText)?.name || fallbackName;
+    const candidateName = rawName || parseResumeText(rawResumeText)?.name || fallbackName;
 
-    if (resumeText.length < 20) {
+    if (rawResumeText.length < 20) {
       failures.push(`row ${index + 2}: resume text too short`);
       return;
     }
+
+    const resumeText = sanitizeResumeText(rawResumeText);
 
     candidates.push({
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${index}`,
@@ -257,7 +286,7 @@ const RecruiterDashboard = () => {
   const [activeMenu, setActiveMenu] = useState('analyzer');
   const [resumeFiles, setResumeFiles] = useState([]);
   const [jobTitle, setJobTitle] = useState('');
-  const [analysisMode, setAnalysisMode] = useState('esco');
+  const [analysisMode, setAnalysisMode] = useState('hybrid');
   const [roleSuggestions, setRoleSuggestions] = useState([]);
   const [showRoleSuggestions, setShowRoleSuggestions] = useState(false);
   const [isParsingFiles, setIsParsingFiles] = useState(false);
@@ -272,6 +301,7 @@ const RecruiterDashboard = () => {
   const [diagnosticsResult, setDiagnosticsResult] = useState(null);
   const [diagnosticsError, setDiagnosticsError] = useState('');
   const [error, setError] = useState('');
+  const [analysisProgress, setAnalysisProgress] = useState({ done: 0, total: 0 });
   const [isDragActive, setIsDragActive] = useState(false);
   const [reportCopied, setReportCopied] = useState(false);
 
@@ -576,19 +606,22 @@ const RecruiterDashboard = () => {
 
     setError('');
     setAnalyzing(true);
+    setAnalysisProgress({ done: 0, total: 0 });
     try {
       const payload = resumeFiles.map((file) => ({
-        resume_text: file.resumeText,
+        resume_text: sanitizeResumeText(file.resumeText),
         candidate_name: file.candidateName,
       }));
 
       const payloadChunks = splitIntoChunks(payload, 10);
-      const chunkResults = [];
+      setAnalysisProgress({ done: 0, total: payloadChunks.length });
 
-      for (const chunk of payloadChunks) {
-        const result = await batchAnalyzeResumes(chunk, jobTitle.trim(), analysisMode);
-        chunkResults.push(...(result?.candidates || []));
-      }
+      const chunkResults = await runChunkedBatches(
+        payloadChunks,
+        jobTitle.trim(),
+        analysisMode,
+        (done) => setAnalysisProgress({ done, total: payloadChunks.length })
+      );
 
       const normalized = rankBatchCandidates(chunkResults, analysisMode);
 
@@ -605,13 +638,18 @@ const RecruiterDashboard = () => {
       setError(err.message || 'Batch analysis failed.');
     } finally {
       setAnalyzing(false);
+      setAnalysisProgress({ done: 0, total: 0 });
     }
   };
 
   const allCandidates = analysisResults;
   const filteredCandidates = allCandidates
     .filter((candidate) => filterTier === 'all' || candidate.tier === filterTier)
-    .sort((a, b) => b.overall_score - a.overall_score);
+    .sort((a, b) => {
+      const rankDiff = Number(a.rank || 0) - Number(b.rank || 0);
+      if (rankDiff !== 0) return rankDiff;
+      return toSafePercent(b.decision_score) - toSafePercent(a.decision_score);
+    });
   const shortlistedCandidates = savedShortlists
     .filter((candidate) => {
       if (!jobTitle.trim()) {
@@ -828,14 +866,15 @@ const RecruiterDashboard = () => {
         onDragLeave={() => setIsDragActive(false)}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`border-2 border-dashed rounded-3xl p-10 text-center cursor-pointer transition-all ${
+        className={`border-2 border-dashed rounded-2xl sm:rounded-3xl p-6 sm:p-10 text-center cursor-pointer transition-all ${
           isDragActive
             ? 'border-cyan-400 bg-cyan-50/80 shadow-lg shadow-cyan-100'
             : 'border-cyan-200 bg-cyan-50/30 hover:bg-cyan-50/80 hover:border-cyan-300 hover:shadow-lg hover:shadow-cyan-100'
         }`}
       >
-        <div className="w-20 h-20 bg-white rounded-full mx-auto flex items-center justify-center shadow-sm mb-4">
-          <Upload size={32} className="text-cyan-500" strokeWidth={2.5} />
+        <div className="w-14 h-14 sm:w-20 sm:h-20 bg-white rounded-full mx-auto flex items-center justify-center shadow-sm mb-3 sm:mb-4">
+          <Upload size={24} className="text-cyan-500 sm:hidden" strokeWidth={2.5} />
+          <Upload size={32} className="text-cyan-500 hidden sm:block" strokeWidth={2.5} />
         </div>
         <p className="font-bold text-lg text-slate-800 tracking-tight">Drop resumes here</p>
         <p className="text-sm font-medium text-slate-500 mt-1">or click to select files and CSV candidate sheets</p>
@@ -880,7 +919,7 @@ const RecruiterDashboard = () => {
       <motion.button
         onClick={handleAnalyzeCandidates}
         disabled={!resumeFiles.length || !jobTitle.trim() || analyzing || isParsingFiles}
-        className={`w-full py-5 px-6 font-bold flex items-center justify-center gap-3 btn-primary text-lg ${
+        className={`w-full py-3.5 sm:py-5 px-4 sm:px-6 font-bold flex items-center justify-center gap-2 sm:gap-3 btn-primary text-base sm:text-lg ${
           !(resumeFiles.length > 0 && jobTitle.trim() && !analyzing && !isParsingFiles)
             ? 'opacity-50 saturate-0 cursor-not-allowed pointer-events-none'
             : ''
@@ -897,7 +936,7 @@ const RecruiterDashboard = () => {
               transition={{ duration: 1, repeat: Infinity }}
               className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
             />
-            Analyzing {resumeFiles.length} candidates...
+            Analyzing {resumeFiles.length} candidates{analysisProgress.total ? ` (${analysisProgress.done}/${analysisProgress.total} batches)` : ''}...
           </>
         ) : (
           <>
@@ -1215,18 +1254,18 @@ const RecruiterDashboard = () => {
       )}
 
       {/* Main Content */}
-      <div className="md:ml-64 min-h-screen p-6">
+      <div className="md:ml-64 min-h-screen p-3 pt-16 sm:p-4 sm:pt-16 md:p-6 md:pt-6">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="flex justify-between items-start gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mb-1 sm:mb-2">
                 Welcome, {user?.name || 'Recruiter'}!
               </h1>
-              <p className="text-slate-500 font-medium">
+              <p className="text-sm sm:text-base text-slate-500 font-medium">
                 Analyze candidates with live scoring, shortlist management, and reports.
               </p>
             </div>
@@ -1237,14 +1276,14 @@ const RecruiterDashboard = () => {
                 setActiveMenu('analyzer');
                 setSidebarOpen(false);
               }}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40"
+              className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 text-sm sm:text-base whitespace-nowrap"
             >
               New Analysis
             </motion.button>
           </div>
         </motion.div>
 
-        <div className="grid md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           {[
             { icon: Users, label: 'Candidates', value: resumeFiles.length, color: 'cyan' },
             { icon: Zap, label: 'Analyzed', value: allCandidates.length, color: 'cyan' },
@@ -1256,7 +1295,7 @@ const RecruiterDashboard = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
-              className="p-6 rounded-3xl bg-white border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group"
+              className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group"
             >
               {/* Decorative background glow */}
               <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-opacity ${statColorClass[color]?.glow || statColorClass.cyan.glow}`} />
@@ -1268,8 +1307,8 @@ const RecruiterDashboard = () => {
                   <Icon size={26} strokeWidth={2.5} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-1">{label}</p>
-                  <p className="text-3xl font-extrabold text-slate-900 tracking-tight">{value}</p>
+                  <p className="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wider mb-0.5 sm:mb-1">{label}</p>
+                  <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{value}</p>
                 </div>
               </div>
             </motion.div>
@@ -1293,8 +1332,8 @@ const RecruiterDashboard = () => {
             transition={{ delay: 0.2 }}
             className="lg:col-span-8 xl:col-span-8"
           >
-            <div className="p-8 rounded-[2rem] bg-white/80 backdrop-blur-xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900 mb-8">
+            <div className="p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2rem] bg-white/80 backdrop-blur-xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 mb-4 sm:mb-6 md:mb-8">
                 {activeMenu === 'analyzer' && 'Batch Candidate Analysis'}
                 {activeMenu === 'analytics' && 'Candidate Analytics'}
                 {activeMenu === 'shortlist' && 'Shortlisted Candidates'}
@@ -1310,17 +1349,17 @@ const RecruiterDashboard = () => {
             transition={{ delay: 0.3 }}
             className="lg:col-span-4 xl:col-span-4"
           >
-            <div className="p-8 rounded-[2rem] bg-white/80 backdrop-blur-xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] sticky top-6">
+            <div className="p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2rem] bg-white/80 backdrop-blur-xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] lg:sticky top-6">
               {selectedCandidate ? (
                 <>
-                  <h3 className="text-2xl font-bold tracking-tight text-slate-900 mb-6">
+                  <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 mb-4 sm:mb-6">
                     {selectedCandidate.candidate_name}
                   </h3>
 
-                  <div className="mb-8 p-6 rounded-3xl bg-gradient-to-br from-cyan-400 to-blue-500 text-white relative overflow-hidden shadow-lg shadow-cyan-500/20">
+                  <div className="mb-6 sm:mb-8 p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-cyan-400 to-blue-500 text-white relative overflow-hidden shadow-lg shadow-cyan-500/20">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl -mr-10 -mt-10" />
                     <p className="text-cyan-50 font-bold uppercase tracking-wider text-xs mb-1 relative z-10">Overall Match Score</p>
-                    <p className="text-5xl font-extrabold tracking-tighter relative z-10">
+                    <p className="text-4xl sm:text-5xl font-extrabold tracking-tighter relative z-10">
                       {toSafePercent(selectedCandidate.overall_score).toFixed(1)}<span className="text-2xl opacity-80">%</span>
                     </p>
                     <p className="text-xs font-semibold text-cyan-50/90 mt-2 relative z-10">

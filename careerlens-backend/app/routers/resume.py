@@ -11,11 +11,13 @@ GET  /resumes/{id}       — Get resume detail
 import pdfplumber
 from io import BytesIO
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, Form
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, Form, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.user import User, Resume
+from app.services.auth_utils import verify_token
 from app.schemas.resume import (
     ResumeUploadRequest,
     ResumeResponse,
@@ -23,20 +25,44 @@ from app.schemas.resume import (
 )
 
 router = APIRouter(prefix="/resumes", tags=["Resumes"])
+security = HTTPBearer(auto_error=False)
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+) -> User:
+    if not credentials or credentials.scheme.lower() != "bearer":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+
+    payload = verify_token(credentials.credentials)
+    if not payload or not payload.get("sub"):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+
+    user = db.query(User).filter(
+        User.id == int(payload["sub"]),
+        User.is_active == True,
+        User.is_deleted == False,
+    ).first()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    return user
 
 
 @router.post("", response_model=ResumeResponse, status_code=201, summary="Upload resume")
 def upload_resume(
     request: ResumeUploadRequest,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Upload a resume text linked to an existing user."""
-    user = db.query(User).filter(User.id == request.user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    """Upload a resume text linked to the authenticated user."""
+    if request.user_id and request.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot upload resume for another user")
 
     resume = Resume(
-        user_id=request.user_id,
+        user_id=current_user.id,
         raw_text=request.resume_text,
         filename=request.filename,
     )
@@ -48,20 +74,19 @@ def upload_resume(
 
 @router.post("/upload-pdf", response_model=ResumeResponse, status_code=201, summary="Upload PDF resume")
 async def upload_pdf_resume(
-    user_id: int = Form(..., description="User ID"),
+    user_id: int | None = Form(None, description="Optional user ID; must match authenticated user"),
     file: UploadFile = None,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Upload a resume PDF file. Extracts text server-side using pdfplumber.
     
-    - **user_id**: ID of the user uploading the resume
+    - **user_id**: Optional ID; if provided must match authenticated user
     - **file**: PDF file (multipart/form-data)
     """
-    # Validate user exists
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    if user_id and user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot upload resume for another user")
     
     # Validate file
     if not file:
@@ -99,7 +124,7 @@ async def upload_pdf_resume(
     # Save resume
     try:
         resume = Resume(
-            user_id=user_id,
+            user_id=current_user.id,
             raw_text=extracted_text,
             filename=file.filename or "uploaded_resume.pdf",
         )
@@ -152,13 +177,18 @@ def _extract_pdf_text(pdf_bytes: bytes) -> str:
 
 @router.get("", response_model=list[ResumeResponse], summary="List resumes")
 def list_resumes(
-    user_id: int = Query(..., description="User ID to filter by"),
+    user_id: int | None = Query(None, description="Optional user ID filter; must match authenticated user"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """List all resumes for a given user."""
+    """List resumes for the authenticated user."""
+    if user_id and user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot list resumes for another user")
+
+    target_user_id = current_user.id
     resumes = (
         db.query(Resume)
-        .filter(Resume.user_id == user_id)
+        .filter(Resume.user_id == target_user_id)
         .order_by(Resume.created_at.desc())
         .all()
     )
@@ -166,9 +196,15 @@ def list_resumes(
 
 
 @router.get("/{resume_id}", response_model=ResumeDetailResponse, summary="Get resume")
-def get_resume(resume_id: int, db: Session = Depends(get_db)):
-    """Get a single resume with full text."""
+def get_resume(
+    resume_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get a single resume owned by the authenticated user."""
     resume = db.query(Resume).filter(Resume.id == resume_id).first()
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
+    if resume.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot access another user's resume")
     return resume

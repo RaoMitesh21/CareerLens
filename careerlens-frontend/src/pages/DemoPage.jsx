@@ -267,7 +267,7 @@ export default function DemoPage() {
           transition={{ duration: 0.5 }}
           className="glass-card p-6 mb-8 border-2 border-success/30 bg-success/5"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#22c55e' }}>
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
@@ -278,7 +278,7 @@ export default function DemoPage() {
                 <p className="text-xs text-ink-muted">Showcase demo: See what strong results look like after analysis</p>
               </div>
             </div>
-            <Link to="/signup" className="btn-primary text-sm">Analyze Your Resume</Link>
+              <Link to="/signup" className="btn-primary text-sm whitespace-nowrap">Analyze Your Resume</Link>
           </div>
         </motion.div>
 
@@ -710,7 +710,7 @@ export default function DemoPage() {
 
         {/* ═══ SUMMARY + CTA ════════════════════════════════════ */}
         <motion.div className="mt-10 text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
-          <div className="glass-card p-6 inline-block max-w-2xl mx-auto mb-6 border-2 border-success/20 bg-success/5">
+          <div className="glass-card p-4 sm:p-6 inline-block max-w-2xl mx-auto mb-6 border-2 border-success/20 bg-success/5">
             <div className="flex items-center justify-center mb-3">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#22c55e' }}>
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
@@ -719,7 +719,7 @@ export default function DemoPage() {
             </div>
             <p className="text-sm text-ink leading-relaxed font-semibold" style={{ fontFamily: 'var(--font-display)' }}>Excellent match! You are a strong candidate for Data Scientist. Your skills in statistics, machine learning, and data analysis align very well with role requirements.</p>
           </div>
-          <div className="flex flex-col md:flex-row items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link to="/signup" className="btn-primary">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
               Get Your Analysis Now

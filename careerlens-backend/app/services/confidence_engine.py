@@ -51,6 +51,15 @@ CONTEXT_BASE = 0.3
 MIN_KEYWORD_LEN = 2          # reject single-char keywords like "r", "c"
 MIN_SINGLE_WORD_LEN = 4      # individual words extracted from labels
 
+# Process-level cache to avoid rebuilding keyword variants for the same skills
+# on every candidate during recruiter batch analysis.
+_SKILL_METADATA_CACHE: Dict[int, tuple[List[str], str]] = {}
+_PATTERN_CACHE: Dict[str, re.Pattern] = {}
+
+# Fuzzy fallback is useful for recall but can dominate latency for long resumes.
+_FUZZY_MAX_RESUME_CHARS = 6000
+_FUZZY_MAX_UNMATCHED_SKILLS = 80
+
 # Section headers that indicate real project/experience usage
 _PROJECT_HEADERS = re.compile(
     r"(?:^|\n)\s*(?:project|experience|work\s*history|employment|"
@@ -279,32 +288,50 @@ def _wb_count(pattern: re.Pattern, text: str) -> int:
 
 def _make_wb_pattern(keyword: str) -> re.Pattern:
     """Compile a word-boundary regex for a keyword."""
+    cached = _PATTERN_CACHE.get(keyword)
+    if cached is not None:
+        return cached
+
     escaped = re.escape(keyword)
-    return re.compile(r"\b" + escaped + r"\b")
+    compiled = re.compile(r"\b" + escaped + r"\b")
+    _PATTERN_CACHE[keyword] = compiled
+    return compiled
 
 
 # ── Keyword Map Builder (SCOPED) ───────────────────────────────────
 def build_keyword_map_for_skills(
     skill_ids: Set[int],
     db: Session,
-) -> Dict[int, List[str]]:
+) -> Tuple[Dict[int, List[str]], Dict[int, str]]:
     """
-    Build {skill_id: [keyword_variants]} ONLY for the given skill IDs.
+    Build scoped skill metadata ONLY for the given skill IDs.
 
     Delegates to _skill_keywords() for each skill, which handles
     phrase variants, alt labels, and individual word extraction.
     """
     if not skill_ids:
-        return {}
+        return {}, {}
 
-    skills = db.query(Skill).filter(Skill.id.in_(skill_ids)).all()
-    out: Dict[int, List[str]] = {}
+    missing_ids = [sid for sid in skill_ids if sid not in _SKILL_METADATA_CACHE]
+    if missing_ids:
+        skills = db.query(Skill).filter(Skill.id.in_(missing_ids)).all()
+        for s in skills:
+            kws = list(_skill_keywords(s.preferred_label, s.alt_labels))
+            label = s.preferred_label or ""
+            _SKILL_METADATA_CACHE[s.id] = (kws, label)
 
-    for s in skills:
-        kws = _skill_keywords(s.preferred_label, s.alt_labels)
-        out[s.id] = list(kws)
+        # Keep cache entries stable even if some ids are no longer present.
+        for sid in missing_ids:
+            _SKILL_METADATA_CACHE.setdefault(sid, ([], ""))
 
-    return out
+    keyword_map: Dict[int, List[str]] = {}
+    label_map: Dict[int, str] = {}
+    for sid in skill_ids:
+        keywords, label = _SKILL_METADATA_CACHE.get(sid, ([], ""))
+        keyword_map[sid] = keywords
+        label_map[sid] = label
+
+    return keyword_map, label_map
 
 
 # ── Match Required Skills Against Resume ────────────────────────────
@@ -322,7 +349,7 @@ def match_skills_in_resume(
     "debugged" matches "debug software" and "provided" matches
     "provide technical documentation".
     """
-    keyword_map = build_keyword_map_for_skills(required_skill_ids, db)
+    keyword_map, label_map = build_keyword_map_for_skills(required_skill_ids, db)
     full_norm = tokenize(resume_text)
     project_zone, other_zone = _split_resume_sections(resume_text)
 
@@ -353,9 +380,8 @@ def match_skills_in_resume(
                 freq_score * FREQ_WEIGHT + context_score * CONTEXT_WEIGHT, 3
             )
 
-            # Clean display label from DB
-            skill_obj = db.query(Skill).filter(Skill.id == sid).first()
-            label = skill_obj.preferred_label if skill_obj else keywords[0]
+            # Use pre-fetched label metadata to avoid per-skill DB queries.
+            label = label_map.get(sid) or (keywords[0] if keywords else "")
 
             confidences[sid] = SkillConfidence(
                 skill_id=sid,
@@ -373,7 +399,11 @@ def match_skills_in_resume(
     # Only applied when rapidfuzz is installed and there are unmatched skills.
     if _RAPIDFUZZ_AVAILABLE:
         unmatched_ids = required_skill_ids - matched
-        if unmatched_ids:
+        allow_fuzzy = (
+            len(full_norm) <= _FUZZY_MAX_RESUME_CHARS
+            and len(unmatched_ids) <= _FUZZY_MAX_UNMATCHED_SKILLS
+        )
+        if unmatched_ids and allow_fuzzy:
             # Fetch preferred_labels for all unmatched in one query
             unmatched_skills = (
                 db.query(Skill)
