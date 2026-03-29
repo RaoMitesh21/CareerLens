@@ -4,6 +4,7 @@ Password hashing, JWT token generation, OTP handling, Email sending
 """
 
 from passlib.context import CryptContext
+from passlib.exc import PasswordTruncateError
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 import secrets
@@ -40,16 +41,13 @@ def hash_password(password: str) -> str:
         raise ValueError("Password must be 72 bytes or fewer")
     
     try:
-        # Suppress passlib truncation warnings
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=DeprecationWarning)
-            warnings.filterwarnings('ignore', category=UserWarning)
-            return pwd_context.hash(password, rounds=12)
-    except Exception as e:
-        # If hashing still fails, raise a more descriptive error
-        if "password" in str(e).lower() and "72" in str(e):
-            raise ValueError("Password is too long for bcrypt (max 72 bytes)")
-        raise e
+      # Suppress passlib backend warnings; functional errors still raise.
+      with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=DeprecationWarning)
+        warnings.filterwarnings('ignore', category=UserWarning)
+        return pwd_context.hash(password, rounds=12)
+    except PasswordTruncateError:
+      raise ValueError("Password must be 72 bytes or fewer")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
