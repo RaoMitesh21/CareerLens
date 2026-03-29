@@ -87,7 +87,11 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
         db.refresh(user)
         
         # Send OTP email
-        send_otp_email(request.email, otp, "registration")
+        if not send_otp_email(request.email, otp, "registration"):
+            raise HTTPException(
+                status_code=503,
+                detail="OTP delivery failed. Please verify SMTP settings and try again."
+            )
         log_auth_event(user.id, "REGISTRATION_INITIATED", request.email)
         
         return RegisterResponse(
@@ -253,7 +257,11 @@ async def resend_otp_registration(request: dict, db: Session = Depends(get_db)):
     db.commit()
     
     # Send OTP email
-    send_otp_email(email, otp, "registration")
+    if not send_otp_email(email, otp, "registration"):
+        raise HTTPException(
+            status_code=503,
+            detail="OTP delivery failed. Please verify SMTP settings and try again."
+        )
     
     return {
         "message": "OTP resent to email",
@@ -295,7 +303,11 @@ async def resend_otp_reset(request: dict, db: Session = Depends(get_db)):
     db.commit()
     
     # Send OTP email
-    send_otp_email(email, otp, "password_reset")
+    if not send_otp_email(email, otp, "password_reset"):
+        raise HTTPException(
+            status_code=503,
+            detail="OTP delivery failed. Please verify SMTP settings and try again."
+        )
     
     return {
         "message": "OTP resent to email",
@@ -337,7 +349,11 @@ async def resend_otp_login(request: dict, db: Session = Depends(get_db)):
     db.commit()
     
     # Send OTP email
-    send_otp_email(email, otp, "login")
+    if not send_otp_email(email, otp, "login"):
+        raise HTTPException(
+            status_code=503,
+            detail="OTP delivery failed. Please verify SMTP settings and try again."
+        )
     
     return {
         "message": "OTP resent to email",
@@ -403,7 +419,11 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
         db.commit()
         
         # Send OTP email
-        send_otp_email(user.email, otp, "login_2fa")
+        if not send_otp_email(user.email, otp, "login_2fa"):
+            raise HTTPException(
+                status_code=503,
+                detail="OTP delivery failed. Please verify SMTP settings and try again."
+            )
         log_auth_event(user.id, "LOGIN_INITIATED", user.email)
         
         return LoginResponse(
@@ -536,7 +556,11 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
         db.commit()
         
         # Send OTP email
-        send_otp_email(user.email, otp, "password_reset")
+        if not send_otp_email(user.email, otp, "password_reset"):
+            raise HTTPException(
+                status_code=503,
+                detail="OTP delivery failed. Please verify SMTP settings and try again."
+            )
         log_auth_event(user.id, "PASSWORD_RESET_REQUESTED", user.email)
         
         return ForgotPasswordResponse(

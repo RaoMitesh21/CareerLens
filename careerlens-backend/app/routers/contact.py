@@ -41,7 +41,9 @@ class ContactFormResponse(BaseModel):
 RECIPIENT_EMAIL = os.getenv("CONTACT_FORM_EMAIL", os.getenv("SMTP_USER", "raomitesh12@gmail.com"))
 SMTP_SERVER = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SENDER_EMAIL = os.getenv("SMTP_USER", "raomitesh12@gmail.com")
+SMTP_LOGIN_USER = os.getenv("SMTP_USER", "")
+SENDER_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_LOGIN_USER or "raomitesh12@gmail.com")
+SENDER_NAME = os.getenv("SMTP_FROM_NAME", "CareerLens")
 SENDER_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 
 
@@ -51,10 +53,14 @@ def send_contact_email(contact_data: ContactFormRequest) -> bool:
     Returns True if successful, False otherwise
     """
     try:
+        if not SMTP_LOGIN_USER or not SENDER_PASSWORD:
+            print("Error: SMTP_USER/SMTP_PASSWORD not configured for contact emails")
+            return False
+
         # Create message root as 'related' to hold inline images
         msg = MIMEMultipart("related")
         msg["Subject"] = f"CareerLens Contact: {contact_data.subject} - From {contact_data.name}"
-        msg["From"] = SENDER_EMAIL
+        msg["From"] = f"{SENDER_NAME} <{SENDER_EMAIL}>"
         msg["To"] = RECIPIENT_EMAIL
         msg["Reply-To"] = contact_data.email
 
@@ -192,9 +198,9 @@ Message:
             print(f"Warning: Logo not found at {logo_path}")
 
         # Send email via SMTP
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=20) as server:
             server.starttls()
-            server.login(SENDER_EMAIL, SENDER_PASSWORD)
+            server.login(SMTP_LOGIN_USER, SENDER_PASSWORD)
             server.send_message(msg)
 
         return True

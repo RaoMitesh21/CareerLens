@@ -27,7 +27,9 @@ class NewsletterSubscribeResponse(BaseModel):
 # ── Email Configuration ──────────────────────────────────────────────
 SMTP_SERVER = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SENDER_EMAIL = os.getenv("SMTP_USER", "raomitesh12@gmail.com")
+SMTP_LOGIN_USER = os.getenv("SMTP_USER", "")
+SENDER_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_LOGIN_USER or "raomitesh12@gmail.com")
+SENDER_NAME = os.getenv("SMTP_FROM_NAME", "CareerLens")
 SENDER_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 
 
@@ -37,19 +39,15 @@ def send_newsletter_confirmation(subscriber_email: str) -> bool:
     Uses the same CID-embedded logo pattern as the contact form emails.
     """
     # Validate SMTP config before attempting
-    if not SENDER_PASSWORD or not SENDER_PASSWORD.strip():
-        print("Error: SMTP_PASSWORD not configured. Newsletter emails cannot be sent.")
-        return False
-    
-    if not SENDER_EMAIL or not SENDER_EMAIL.strip():
-        print("Error: SMTP_USER not configured. Newsletter emails cannot be sent.")
+    if not SMTP_LOGIN_USER or not SENDER_PASSWORD or not SENDER_PASSWORD.strip():
+        print("Error: SMTP_USER/SMTP_PASSWORD not configured. Newsletter emails cannot be sent.")
         return False
     
     try:
         # Create message root as 'related' to hold inline images
         msg = MIMEMultipart("related")
         msg["Subject"] = "Welcome to the CareerLens Newsletter! 🎉"
-        msg["From"] = SENDER_EMAIL
+        msg["From"] = f"{SENDER_NAME} <{SENDER_EMAIL}>"
         msg["To"] = subscriber_email
 
         # Create alternative container for text/html
@@ -213,9 +211,9 @@ If you wish to unsubscribe, please contact us at support@careerlens.in.
             print(f"Warning: Logo not found at {logo_path}")
 
         # Send email via SMTP
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=20) as server:
             server.starttls()
-            server.login(SENDER_EMAIL, SENDER_PASSWORD)
+            server.login(SMTP_LOGIN_USER, SENDER_PASSWORD)
             server.send_message(msg)
 
         return True

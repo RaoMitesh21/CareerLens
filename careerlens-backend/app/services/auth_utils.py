@@ -121,14 +121,19 @@ class EmailService:
     def __init__(self):
         self.smtp_server = os.getenv("SMTP_HOST", "smtp.gmail.com")
         self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
-        self.sender_email = os.getenv("SMTP_USER") or os.getenv("SENDER_EMAIL")
+        self.smtp_user = os.getenv("SMTP_USER") or os.getenv("SENDER_EMAIL")
+        self.sender_email = os.getenv("SMTP_FROM_EMAIL") or self.smtp_user
+        self.sender_name = os.getenv("SMTP_FROM_NAME", "CareerLens")
         self.sender_password = os.getenv("SMTP_PASSWORD") or os.getenv("SENDER_PASSWORD")
+
+    def is_configured(self) -> bool:
+        return bool(self.smtp_user and self.sender_password)
     
     def send_otp_email(self, recipient_email: str, otp: str, purpose: str = "registration") -> bool:
         """Send OTP via email"""
-        if not self.sender_email or not self.sender_password:
-            print(f"⚠️  Email not configured. OTP for {recipient_email}: {otp}")
-            return True
+        if not self.is_configured():
+            print("OTP email failed: SMTP_USER/SMTP_PASSWORD not configured")
+            return False
         
         try:
             subject = {
@@ -142,7 +147,7 @@ class EmailService:
             # Use 'related' to hold inline images
             message = MIMEMultipart("related")
             message["Subject"] = subject
-            message["From"] = self.sender_email
+            message["From"] = f"{self.sender_name} <{self.sender_email}>"
             message["To"] = recipient_email
             
             # Alternative container holds the html
@@ -163,15 +168,15 @@ class EmailService:
                 print(f"Warning: Logo not found at {logo_path}")
             
             # Send email
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+            with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=20) as server:
                 server.starttls()
-                server.login(self.sender_email, self.sender_password)
+                server.login(self.smtp_user, self.sender_password)
                 server.sendmail(self.sender_email, recipient_email, message.as_string())
             
-            print(f"✓ Email sent to {recipient_email}")
+            print(f"Email sent to {recipient_email}")
             return True
         except Exception as e:
-            print(f"✗ Failed to send email: {str(e)}")
+            print(f"Failed to send email: {str(e)}")
             return False
     
     def _get_email_body(self, otp: str, purpose: str) -> str:
