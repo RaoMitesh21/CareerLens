@@ -126,19 +126,19 @@ export default function LandingPage() {
       {/* ── Background ───────────────────────────────────────────── */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
         {/* Cyan blob — top right */}
-        <div className="absolute rounded-full blur-3xl opacity-25"
+        <div className="absolute rounded-full md:blur-3xl opacity-25"
           style={{
             width: 'clamp(300px, 80vw, 800px)', height: 'clamp(300px, 80vw, 800px)', top: '-15%', right: '-10%',
             background: 'radial-gradient(circle, rgba(0,194,203,0.25) 0%, rgba(14,165,233,0.08) 40%, transparent 70%)'
           }} />
         {/* Violet blob — left */}
-        <div className="absolute rounded-full blur-3xl opacity-15"
+        <div className="absolute rounded-full md:blur-3xl opacity-15"
           style={{
             width: 'clamp(200px, 60vw, 600px)', height: 'clamp(200px, 60vw, 600px)', top: '35%', left: '-12%',
             background: 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, rgba(59,130,246,0.05) 50%, transparent 70%)'
           }} />
         {/* Warm blob — bottom right */}
-        <div className="absolute rounded-full blur-3xl opacity-10"
+        <div className="absolute rounded-full md:blur-3xl opacity-10"
           style={{
             width: 'clamp(150px, 50vw, 400px)', height: 'clamp(150px, 50vw, 400px)', bottom: '5%', right: '10%',
             background: 'radial-gradient(circle, rgba(249,115,22,0.10) 0%, transparent 70%)'
@@ -195,7 +195,7 @@ export default function LandingPage() {
               {/* Headline — rotating taglines */}
               <div className="relative" style={{ minHeight: 'clamp(3.5rem, 10vw, 9.5rem)' }}>
                 {/* Radial glow behind headline */}
-                <div className="absolute -inset-10 rounded-full blur-3xl opacity-30 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, rgba(0,194,203,0.2) 0%, rgba(139,92,246,0.08) 50%, transparent 70%)' }} />
+                <div className="absolute -inset-10 rounded-full md:blur-3xl opacity-30 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, rgba(0,194,203,0.2) 0%, rgba(139,92,246,0.08) 50%, transparent 70%)' }} />
                 <AnimatePresence mode="wait">
                   <motion.h1
                     key={tagIdx}
@@ -205,9 +205,9 @@ export default function LandingPage() {
                       fontWeight: 800,
                       fontSize: 'clamp(1.85rem, 3.8vw, 3.2rem)',
                     }}
-                    initial={{ y: 30, opacity: 0, filter: 'blur(6px)' }}
-                    animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
-                    exit={{ y: -25, opacity: 0, filter: 'blur(6px)' }}
+                    initial={{ y: 30, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -25, opacity: 0 }}
                     transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                   >
                     <span className="text-ink">{line1}</span>
@@ -704,8 +704,8 @@ export default function LandingPage() {
               transition={{ duration: 0.6 }}
               style={{
                 background: 'rgba(255, 255, 255, 0.88)',
-                backdropFilter: 'blur(30px) saturate(160%)',
-                WebkitBackdropFilter: 'blur(30px) saturate(160%)',
+                backdropFilter: 'blur(10px) saturate(160%)',
+                WebkitBackdropFilter: 'blur(10px) saturate(160%)',
                 border: '1px solid rgba(255, 255, 255, 0.7)',
                 boxShadow: '0 24px 48px rgba(15, 23, 42, 0.06), 0 8px 20px rgba(0, 194, 203, 0.08), inset 0 1px 0 rgba(255,255,255,0.95)'
               }}
@@ -929,9 +929,9 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
           >
             {/* Decorative blobs inside CTA */}
-            <div className="absolute rounded-full blur-3xl opacity-25"
+            <div className="absolute rounded-full md:blur-3xl opacity-25"
               style={{ width: 350, height: 350, top: '-20%', right: '-5%', background: 'radial-gradient(circle, #00C2CB 0%, transparent 70%)' }} />
-            <div className="absolute rounded-full blur-3xl opacity-15"
+            <div className="absolute rounded-full md:blur-3xl opacity-15"
               style={{ width: 250, height: 250, bottom: '-15%', left: '10%', background: 'radial-gradient(circle, #8B5CF6 0%, transparent 70%)' }} />
 
             <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">
@@ -1186,7 +1186,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full blur-3xl" style={{ background: 'rgba(0,194,203,0.1)' }} />
+            <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full md:blur-3xl" style={{ background: 'rgba(0,194,203,0.1)' }} />
             <div className="grid sm:grid-cols-2 gap-6 items-center relative z-10">
               <div className="text-center sm:text-left">
                 <h3 className="text-lg font-bold text-white mb-1.5">Stay in the loop</h3>

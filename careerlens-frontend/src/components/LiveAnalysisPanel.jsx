@@ -49,7 +49,7 @@ function ScoreRing({ score = 87, size = 180, animate = false }) {
   return (
     <div className="relative flex items-center justify-center mx-auto" style={{ width: displaySize, height: displaySize }}>
       <div className="absolute inset-0 rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%)', filter: 'blur(16px)', transform: 'scale(1.3)' }} />
+        style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%)', transform: 'scale(1.3)' }} />
       <svg width={displaySize} height={displaySize} className="-rotate-90 relative z-10">
         <defs>
           <linearGradient id="sr-grad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -164,8 +164,8 @@ export default function LiveAnalysisPanel() {
   /* ── Glass styles ──────────────────────────────────────────── */
   const panelStyle = {
     background: 'rgba(255,255,255,0.62)',
-    backdropFilter: 'blur(28px) saturate(165%)',
-    WebkitBackdropFilter: 'blur(28px) saturate(165%)',
+    backdropFilter: 'blur(12px) saturate(140%)',
+    WebkitBackdropFilter: 'blur(12px) saturate(140%)',
     borderColor: 'rgba(255,255,255,0.55)',
     boxShadow: '0 28px 70px rgba(15,23,42,0.1), 0 10px 28px rgba(14,165,233,0.06), inset 0 1px 0 rgba(255,255,255,0.9), inset 0 0 20px rgba(255,255,255,0.2)',
   };
@@ -180,11 +180,11 @@ export default function LiveAnalysisPanel() {
     <div className="relative w-full flex items-start justify-center lg:pt-4">
       {/* BG blobs */}
       <div className="absolute inset-0 pointer-events-none">
-        <motion.div className="absolute rounded-full blur-3xl"
+        <motion.div className="absolute rounded-full md:blur-3xl"
           style={{ width: 260, height: 260, top: 15, right: 35, background: 'rgba(6,182,212,0.18)' }}
           animate={{ opacity: [0.4, 0.75, 0.4], scale: [0.96, 1.06, 0.96] }}
           transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }} />
-        <motion.div className="absolute rounded-full blur-3xl"
+        <motion.div className="absolute rounded-full md:blur-3xl"
           style={{ width: 280, height: 280, bottom: 15, left: 25, background: 'rgba(99,102,241,0.14)' }}
           animate={{ opacity: [0.3, 0.65, 0.3], scale: [1.04, 0.94, 1.04] }}
           transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }} />
@@ -209,7 +209,7 @@ export default function LiveAnalysisPanel() {
               <div className="min-w-0">
                 <p className="text-[0.6rem] uppercase tracking-widest text-slate-400">Resume</p>
                 <p className="text-sm font-bold text-slate-900 truncate">Rao Mitesh</p>
-                <p className="text-[0.7rem] text-slate-500">Data Scientist • Ahmedabad</p>
+                <p className="text-[0.7rem] text-slate-500">Jr. Data Scientist • Ahmedabad</p>
               </div>
               <div className="flex flex-wrap gap-1 justify-end max-w-[150px] shrink-0">
                 {['Python', 'ML', 'SQL'].map(s => (
@@ -293,8 +293,8 @@ export default function LiveAnalysisPanel() {
               className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-[24px]"
               style={{
                 background: 'rgba(255,255,255,0.9)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
               }}
               initial={{ opacity: 1 }}
               exit={{ opacity: 0 }}
