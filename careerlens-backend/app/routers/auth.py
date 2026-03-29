@@ -104,6 +104,8 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
             otp_medium="email"
         )
     
+    except HTTPException:
+        raise
     except Exception as e:
         if isinstance(e, ValueError):
             raise HTTPException(
@@ -188,6 +190,8 @@ async def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
             verified_at=datetime.utcnow()
         )
     
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -211,6 +215,8 @@ async def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
             verified_at=datetime.utcnow()
         )
     
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -256,12 +262,8 @@ async def resend_otp_registration(request: dict, db: Session = Depends(get_db)):
     db.add(otp_record)
     db.commit()
     
-    # Send OTP email
-    if not send_otp_email(email, otp, "registration"):
-        raise HTTPException(
-            status_code=503,
-            detail="OTP delivery failed. Please verify SMTP settings and try again."
-        )
+    # Send OTP email (async - returns immediately)
+    send_otp_email(email, otp, "registration")
     
     return {
         "message": "OTP resent to email",
@@ -302,12 +304,8 @@ async def resend_otp_reset(request: dict, db: Session = Depends(get_db)):
     db.add(otp_record)
     db.commit()
     
-    # Send OTP email
-    if not send_otp_email(email, otp, "password_reset"):
-        raise HTTPException(
-            status_code=503,
-            detail="OTP delivery failed. Please verify SMTP settings and try again."
-        )
+    # Send OTP email (async - returns immediately)
+    send_otp_email(email, otp, "password_reset")
     
     return {
         "message": "OTP resent to email",
@@ -348,12 +346,8 @@ async def resend_otp_login(request: dict, db: Session = Depends(get_db)):
     db.add(otp_record)
     db.commit()
     
-    # Send OTP email
-    if not send_otp_email(email, otp, "login"):
-        raise HTTPException(
-            status_code=503,
-            detail="OTP delivery failed. Please verify SMTP settings and try again."
-        )
+    # Send OTP email (async - returns immediately)
+    send_otp_email(email, otp, "login_2fa")
     
     return {
         "message": "OTP resent to email",
@@ -418,12 +412,9 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
         db.add(otp_record)
         db.commit()
         
-        # Send OTP email
-        if not send_otp_email(user.email, otp, "login_2fa"):
-            raise HTTPException(
-                status_code=503,
-                detail="OTP delivery failed. Please verify SMTP settings and try again."
-            )
+        # Send OTP email (async - returns immediately)
+        send_otp_email(user.email, otp, "login_2fa")
+        
         log_auth_event(user.id, "LOGIN_INITIATED", user.email)
         
         return LoginResponse(
@@ -436,6 +427,8 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
             otp_medium="email"
         )
     
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -509,6 +502,8 @@ async def verify_login_otp(request: VerifyLoginOTPRequest, db: Session = Depends
             logged_in_at=datetime.utcnow()
         )
     
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -555,12 +550,9 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
         db.add(otp_record)
         db.commit()
         
-        # Send OTP email
-        if not send_otp_email(user.email, otp, "password_reset"):
-            raise HTTPException(
-                status_code=503,
-                detail="OTP delivery failed. Please verify SMTP settings and try again."
-            )
+        # Send OTP email (async - returns immediately)
+        send_otp_email(user.email, otp, "password_reset")
+        
         log_auth_event(user.id, "PASSWORD_RESET_REQUESTED", user.email)
         
         return ForgotPasswordResponse(
@@ -629,6 +621,8 @@ async def reset_password(request: ResetPasswordRequest, db: Session = Depends(ge
             user_id=user.id
         )
     
+    except HTTPException:
+        raise
     except Exception as e:
         if isinstance(e, ValueError):
             raise HTTPException(

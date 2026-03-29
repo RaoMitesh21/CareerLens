@@ -4,6 +4,7 @@ Handles contact form submissions and sends emails
 """
 
 import smtplib
+import threading
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
@@ -42,7 +43,8 @@ RECIPIENT_EMAIL = os.getenv("CONTACT_FORM_EMAIL", os.getenv("SMTP_USER", "raomit
 SMTP_SERVER = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_LOGIN_USER = os.getenv("SMTP_USER", "")
-SENDER_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_LOGIN_USER or "raomitesh12@gmail.com")
+_configured_sender = os.getenv("SMTP_FROM_EMAIL", SMTP_LOGIN_USER or "raomitesh12@gmail.com")
+SENDER_EMAIL = SMTP_LOGIN_USER if SMTP_LOGIN_USER and "gmail" in SMTP_SERVER.lower() else _configured_sender
 SENDER_NAME = os.getenv("SMTP_FROM_NAME", "CareerLens")
 SENDER_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 
@@ -198,7 +200,7 @@ Message:
             print(f"Warning: Logo not found at {logo_path}")
 
         # Send email via SMTP
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=20) as server:
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
             server.starttls()
             server.login(SMTP_LOGIN_USER, SENDER_PASSWORD)
             server.send_message(msg)
@@ -208,6 +210,12 @@ Message:
     except Exception as e:
         print(f"Error sending email: {str(e)}")
         return False
+
+
+def send_contact_email_async(contact_data: ContactFormRequest) -> None:
+    """Fire-and-forget contact email to avoid request timeouts."""
+    thread = threading.Thread(target=send_contact_email, args=(contact_data,), daemon=True)
+    thread.start()
 
 
 # ── Routes ──────────────────────────────────────────────────────────
@@ -253,14 +261,8 @@ async def submit_contact_form(contact_data: ContactFormRequest):
                 detail="Message is required (minimum 10 characters)"
             )
 
-        # Send email
-        email_sent = send_contact_email(contact_data)
-
-        if not email_sent:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to send email. Please try again later."
-            )
+        # Queue email in background to keep API responsive.
+        send_contact_email_async(contact_data)
 
         return ContactFormResponse(
             success=True,

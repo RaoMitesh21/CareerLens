@@ -4,6 +4,7 @@ Handles newsletter signups and sends confirmation emails via SMTP
 """
 
 import smtplib
+import threading
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
@@ -28,7 +29,8 @@ class NewsletterSubscribeResponse(BaseModel):
 SMTP_SERVER = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_LOGIN_USER = os.getenv("SMTP_USER", "")
-SENDER_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_LOGIN_USER or "raomitesh12@gmail.com")
+_configured_sender = os.getenv("SMTP_FROM_EMAIL", SMTP_LOGIN_USER or "raomitesh12@gmail.com")
+SENDER_EMAIL = SMTP_LOGIN_USER if SMTP_LOGIN_USER and "gmail" in SMTP_SERVER.lower() else _configured_sender
 SENDER_NAME = os.getenv("SMTP_FROM_NAME", "CareerLens")
 SENDER_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 
@@ -211,7 +213,7 @@ If you wish to unsubscribe, please contact us at support@careerlens.in.
             print(f"Warning: Logo not found at {logo_path}")
 
         # Send email via SMTP
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=20) as server:
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
             server.starttls()
             server.login(SMTP_LOGIN_USER, SENDER_PASSWORD)
             server.send_message(msg)
@@ -221,6 +223,12 @@ If you wish to unsubscribe, please contact us at support@careerlens.in.
     except Exception as e:
         print(f"Error sending newsletter email: {str(e)}")
         return False
+
+
+def send_newsletter_confirmation_async(subscriber_email: str) -> None:
+    """Fire-and-forget newsletter email to avoid request timeouts."""
+    thread = threading.Thread(target=send_newsletter_confirmation, args=(subscriber_email,), daemon=True)
+    thread.start()
 
 
 # ── Routes ──────────────────────────────────────────────────────────
@@ -244,14 +252,8 @@ async def subscribe_newsletter(data: NewsletterSubscribeRequest):
                 detail="Email service is temporarily unavailable. Please try again later."
             )
 
-        # Send confirmation email
-        email_sent = send_newsletter_confirmation(data.email)
-
-        if not email_sent:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to send confirmation email. Please try again later."
-            )
+        # Queue confirmation email in background to keep API responsive.
+        send_newsletter_confirmation_async(data.email)
 
         return NewsletterSubscribeResponse(
             success=True,

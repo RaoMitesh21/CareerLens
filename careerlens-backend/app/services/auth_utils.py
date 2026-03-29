@@ -122,7 +122,12 @@ class EmailService:
         self.smtp_server = os.getenv("SMTP_HOST", "smtp.gmail.com")
         self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
         self.smtp_user = os.getenv("SMTP_USER") or os.getenv("SENDER_EMAIL")
-        self.sender_email = os.getenv("SMTP_FROM_EMAIL") or self.smtp_user
+        configured_sender = os.getenv("SMTP_FROM_EMAIL") or self.smtp_user
+        # Gmail commonly rejects arbitrary From addresses; default to authenticated account.
+        if self.smtp_user and "gmail" in self.smtp_server.lower():
+            self.sender_email = self.smtp_user
+        else:
+            self.sender_email = configured_sender
         self.sender_name = os.getenv("SMTP_FROM_NAME", "CareerLens")
         self.sender_password = os.getenv("SMTP_PASSWORD") or os.getenv("SENDER_PASSWORD")
 
