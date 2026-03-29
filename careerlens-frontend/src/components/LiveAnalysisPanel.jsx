@@ -48,8 +48,17 @@ function ScoreRing({ score = 87, size = 180, animate = false }) {
 
   return (
     <div className="relative flex items-center justify-center mx-auto" style={{ width: displaySize, height: displaySize }}>
+      {/* Outer glow rings */}
+      <motion.div 
+        className="absolute inset-0 rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.25) 0%, transparent 70%)', transform: 'scale(1.5)' }}
+        animate={animate ? { opacity: [0.4, 0.8, 0.4], scale: [1.4, 1.6, 1.4] } : {}}
+        transition={animate ? { duration: 3, repeat: Infinity, ease: 'easeInOut' } : {}}
+      />
       <div className="absolute inset-0 rounded-full pointer-events-none"
         style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%)', transform: 'scale(1.3)' }} />
+      
+      {/* SVG Ring */}
       <svg width={displaySize} height={displaySize} className="-rotate-90 relative z-10">
         <defs>
           <linearGradient id="sr-grad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -57,27 +66,55 @@ function ScoreRing({ score = 87, size = 180, animate = false }) {
             <stop offset="55%" stopColor="#3b82f6" />
             <stop offset="100%" stopColor="#8b5cf6" />
           </linearGradient>
-          <filter id="sr-glow"><feGaussianBlur stdDeviation="2.5" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+          <filter id="sr-glow">
+            <feGaussianBlur stdDeviation="3.5" result="b" />
+            <feMerge>
+              <feMergeNode in="b" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <filter id="sr-shadow">
+            <feDropShadow dx="0" dy="0" stdDeviation="4" floodOpacity="0.35" />
+          </filter>
         </defs>
-        <circle cx={displaySize / 2} cy={displaySize / 2} r={r} fill="none" stroke="rgba(148,163,184,0.12)" strokeWidth={stroke} />
+        {/* Background circle */}
+        <circle cx={displaySize / 2} cy={displaySize / 2} r={r} fill="none" stroke="rgba(148,163,184,0.08)" strokeWidth={stroke} />
+        
+        {/* Animated progress ring */}
         <motion.circle
           cx={displaySize / 2} cy={displaySize / 2} r={r}
           fill="none" stroke="url(#sr-grad)" strokeWidth={stroke}
           strokeLinecap="round" strokeDasharray={C} filter="url(#sr-glow)"
-          initial={{ strokeDashoffset: animate ? C : offset }}
-          animate={{ strokeDashoffset: offset }}
-          transition={animate ? { duration: 1.8, ease: [0.22, 1, 0.36, 1] } : { duration: 0 }}
+          initial={{ strokeDashoffset: animate ? C : offset, opacity: 0.8 }}
+          animate={{ 
+            strokeDashoffset: offset,
+            opacity: animate ? [0.8, 1, 0.8] : 1
+          }}
+          transition={animate ? { 
+            strokeDashoffset: { duration: 1.8, ease: [0.22, 1, 0.36, 1] },
+            opacity: { duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 1 }
+          } : { duration: 0 }}
         />
       </svg>
+
+      {/* Center content */}
       <div className="absolute text-center z-10">
-        <motion.p
-          className="text-4xl font-extrabold text-slate-900"
-          style={{ fontFamily: 'var(--font-display)' }}
+        <motion.div
+          className="relative"
           initial={animate ? { opacity: 0, scale: 0.85 } : {}}
           animate={{ opacity: 1, scale: 1 }}
           transition={animate ? { duration: 0.5, ease: [0.22, 1, 0.36, 1] } : { duration: 0 }}
-        >{score}%</motion.p>
-        <p className="text-[0.6rem] uppercase tracking-[0.16em] text-slate-500 mt-0.5">Match Score</p>
+        >
+          <motion.p
+            className="text-4xl font-extrabold text-slate-900"
+            style={{ fontFamily: 'var(--font-display)' }}
+            animate={animate ? { scale: [1, 1.05, 1] } : {}}
+            transition={animate ? { duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 1.2 } : {}}
+          >
+            {score}%
+          </motion.p>
+          <p className="text-[0.6rem] uppercase tracking-[0.16em] text-slate-500 mt-0.5">Match Score</p>
+        </motion.div>
       </div>
     </div>
   );
