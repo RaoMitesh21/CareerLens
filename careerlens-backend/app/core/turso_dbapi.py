@@ -25,9 +25,55 @@ import os
 import time
 import socket
 
+
+def _extract_query_token(raw_query: str):
+    """Extract auth token from raw query string without '+' -> ' ' conversion."""
+    if not raw_query:
+        return None
+
+    for part in raw_query.split("&"):
+        if not part:
+            continue
+        if "=" in part:
+            k, v = part.split("=", 1)
+        else:
+            k, v = part, ""
+
+        key = urllib.parse.unquote(k).strip().lower()
+        if key in ("authtoken", "auth_token"):
+            # Use unquote (not unquote_plus) so '+' remains '+' in token.
+            return urllib.parse.unquote(v)
+
+    return None
+
+
+def _normalize_token(token):
+    if token is None:
+        return None
+
+    normalized = str(token).strip().strip("\"'")
+    if normalized.lower().startswith("bearer "):
+        normalized = normalized[7:].strip()
+
+    # Remove accidental whitespace/newlines copied into env values.
+    normalized = "".join(normalized.split())
+    return normalized or None
+
+
+def _to_turso_value(value):
+    if value is None:
+        return {"type": "null"}
+    if isinstance(value, bool):
+        return {"type": "integer", "value": "1" if value else "0"}
+    if isinstance(value, int):
+        return {"type": "integer", "value": str(value)}
+    if isinstance(value, float):
+        return {"type": "float", "value": str(value)}
+    return {"type": "text", "value": str(value)}
+
 def connect(*args, **kwargs):
     url = kwargs.get("database") or (args[0] if args else None)
-    auth_token = kwargs.get("auth_token")
+    auth_token = _normalize_token(kwargs.get("auth_token"))
 
     if not url:
         raise OperationalError("Missing Turso database URL")
@@ -41,14 +87,7 @@ def connect(*args, **kwargs):
     # Extract auth token from URL query when present.
     parsed = urllib.parse.urlparse(url_str)
     if not auth_token and parsed.query:
-        # parse_qs returns lists; get the first value and ensure it's decoded
-        query = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
-        auth_token = query.get("authToken", [None])[0]
-        if not auth_token:
-            auth_token = query.get("authtoken", [None])[0]
-        # Ensure token is properly decoded (parse_qs does this, but be explicit)
-        if auth_token:
-            auth_token = auth_token.strip()
+        auth_token = _normalize_token(_extract_query_token(parsed.query))
 
     # Remove query string from URL for Turso HTTP endpoint
     if parsed.query:
@@ -56,9 +95,7 @@ def connect(*args, **kwargs):
 
     # Explicit token from TURSO_AUTH_TOKEN env var (Render environment variable)
     if not auth_token:
-        auth_token = os.getenv("TURSO_AUTH_TOKEN")
-        if auth_token:
-            auth_token = auth_token.strip()
+        auth_token = _normalize_token(os.getenv("TURSO_AUTH_TOKEN"))
 
     if not auth_token:
         raise OperationalError("Missing Turso auth token (authToken URL param or TURSO_AUTH_TOKEN env var)")
@@ -98,11 +135,12 @@ class Cursor:
         is_read_only = sql_head.startswith(("SELECT", "PRAGMA", "WITH"))
         args = []
         if isinstance(parameters, dict):
-            # Turso accepts plain JSON values for named parameters.
-            args = {str(k): v for k, v in parameters.items()}
+            args = [
+                {"name": str(k), "value": _to_turso_value(v)}
+                for k, v in parameters.items()
+            ]
         elif isinstance(parameters, (list, tuple)):
-            # Turso accepts positional parameter arrays as plain JSON values.
-            args = list(parameters)
+            args = [_to_turso_value(v) for v in parameters]
             
         payload = json.dumps({
             "requests": [
