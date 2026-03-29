@@ -86,12 +86,8 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
         
-        # Send OTP email
-        if not send_otp_email(request.email, otp, "registration"):
-            raise HTTPException(
-                status_code=503,
-                detail="OTP delivery failed. Please verify SMTP settings and try again."
-            )
+        # Attempt OTP delivery but do not fail registration if SMTP is temporarily unavailable.
+        send_otp_email(request.email, otp, "registration")
         log_auth_event(user.id, "REGISTRATION_INITIATED", request.email)
         
         return RegisterResponse(
