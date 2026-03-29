@@ -21,6 +21,7 @@ import urllib.request
 import urllib.error
 import urllib.parse
 import json
+import base64
 import os
 import time
 import socket
@@ -60,6 +61,27 @@ def _normalize_token(token):
     return normalized or None
 
 
+def _is_valid_jwt_shape(token):
+    """Best-effort structure check: 3 parts and decodable JSON header/payload."""
+    if not token:
+        return False
+    parts = token.split(".")
+    if len(parts) != 3:
+        return False
+
+    def _decode_json(part):
+        pad = "=" * ((4 - len(part) % 4) % 4)
+        raw = base64.urlsafe_b64decode((part + pad).encode("utf-8"))
+        return json.loads(raw.decode("utf-8"))
+
+    try:
+        _decode_json(parts[0])
+        _decode_json(parts[1])
+        return True
+    except Exception:
+        return False
+
+
 def _to_turso_value(value):
     if value is None:
         return {"type": "null"}
@@ -93,9 +115,14 @@ def connect(*args, **kwargs):
     if parsed.query:
         url_str = urllib.parse.urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
 
-    # Explicit token from TURSO_AUTH_TOKEN env var (Render environment variable)
+    # Explicit TURSO_AUTH_TOKEN should win over URL query token.
+    env_token = _normalize_token(os.getenv("TURSO_AUTH_TOKEN"))
+    if env_token:
+        auth_token = env_token
+
+    # Fallback to env token only if URL token was missing.
     if not auth_token:
-        auth_token = _normalize_token(os.getenv("TURSO_AUTH_TOKEN"))
+        auth_token = env_token
 
     if not auth_token:
         raise OperationalError("Missing Turso auth token (authToken URL param or TURSO_AUTH_TOKEN env var)")
@@ -103,6 +130,9 @@ def connect(*args, **kwargs):
     # Validate token is not obviously truncated (JWT tokens are typically 200+ chars)
     if len(auth_token) < 50:
         raise OperationalError(f"Auth token appears truncated or invalid (length: {len(auth_token)})")
+
+    if not _is_valid_jwt_shape(auth_token):
+        raise OperationalError("Turso auth token is not a valid JWT structure; regenerate token in Turso dashboard")
 
     return Connection(url_str, auth_token)
 
