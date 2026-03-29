@@ -4,7 +4,6 @@ Password hashing, JWT token generation, OTP handling, Email sending
 """
 
 from passlib.context import CryptContext
-from passlib.exc import PasswordTruncateError
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 import secrets
@@ -25,29 +24,24 @@ load_dotenv()
 
 import warnings
 
-# Configure passlib to not raise errors on password truncation
+# Use pbkdf2_sha256 for new passwords; keep bcrypt for legacy verification.
 pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
-    bcrypt__rounds=12,
-    bcrypt__default_rounds=12
+  schemes=["pbkdf2_sha256", "bcrypt"],
+  deprecated="auto"
 )
 
 
 def hash_password(password: str) -> str:
-    """Hash a password using bcrypt"""
-    # Enforce password length limit for bcrypt (72 bytes max)
-    if len(password.encode('utf-8')) > 72:
-        raise ValueError("Password must be 72 bytes or fewer")
-    
+    """Hash a password using the configured primary scheme."""
+
     try:
-      # Suppress passlib backend warnings; functional errors still raise.
-      with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', category=DeprecationWarning)
-        warnings.filterwarnings('ignore', category=UserWarning)
-        return pwd_context.hash(password, rounds=12)
-    except PasswordTruncateError:
-      raise ValueError("Password must be 72 bytes or fewer")
+        # Suppress passlib backend warnings; functional errors still raise.
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=DeprecationWarning)
+            warnings.filterwarnings('ignore', category=UserWarning)
+            return pwd_context.hash(password)
+    except Exception as e:
+      raise e
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

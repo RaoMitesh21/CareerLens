@@ -35,24 +35,9 @@ export const validatePassword = (password) => {
     };
   }
 
-  // Check max length (bcrypt limit is 72 bytes)
-  if (password.length > 72) {
-    return {
-      valid: false,
-      errors: ['Password cannot exceed 72 characters'],
-      requirements: {
-        length: password.length >= 8 && password.length <= 72,
-        uppercase: /[A-Z]/.test(password),
-        lowercase: /[a-z]/.test(password),
-        number: /\d/.test(password),
-        special: /[@$!%*?&]/.test(password),
-      },
-    };
-  }
-
   const errors = [];
   const requirements = {
-    length: password.length >= 8 && password.length <= 72,
+    length: password.length >= 8,
     uppercase: /[A-Z]/.test(password),
     lowercase: /[a-z]/.test(password),
     number: /\d/.test(password),
@@ -60,7 +45,6 @@ export const validatePassword = (password) => {
   };
 
   if (password.length < 8) errors.push('At least 8 characters');
-  if (password.length > 72) errors.push('Password must be 72 characters or less');
   if (!requirements.uppercase) errors.push('One uppercase letter (A-Z)');
   if (!requirements.lowercase) errors.push('One lowercase letter (a-z)');
   if (!requirements.number) errors.push('One number (0-9)');
