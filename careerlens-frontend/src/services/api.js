@@ -6,11 +6,27 @@
 
 function resolveApiBaseUrl() {
   const envUrl = (import.meta.env.VITE_API_URL || '').trim();
-  const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+  
+  if (typeof window === 'undefined') {
+    return envUrl || 'http://127.0.0.1:8012';
+  }
 
-  // Route through Vite proxy in local development to avoid CORS issues.
+  const hostname = window.location.hostname;
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+
+  // Local development: route through Vite proxy to avoid CORS issues
   if (isLocalhost) {
     return '/api';
+  }
+
+  // Production: use explicit env URL, or auto-detect if on careerlens domains
+  if (envUrl) {
+    return envUrl;
+  }
+
+  // Auto-detect production API based on frontend domain
+  if (hostname.includes('careerlens.in') || hostname.includes('vercel.app')) {
+    return 'https://careerlens-api-imy1.onrender.com';
   }
 
   return envUrl || 'http://127.0.0.1:8012';
