@@ -36,6 +36,15 @@ def send_newsletter_confirmation(subscriber_email: str) -> bool:
     Send a beautifully designed newsletter confirmation email to the subscriber.
     Uses the same CID-embedded logo pattern as the contact form emails.
     """
+    # Validate SMTP config before attempting
+    if not SENDER_PASSWORD or not SENDER_PASSWORD.strip():
+        print("Error: SMTP_PASSWORD not configured. Newsletter emails cannot be sent.")
+        return False
+    
+    if not SENDER_EMAIL or not SENDER_EMAIL.strip():
+        print("Error: SMTP_USER not configured. Newsletter emails cannot be sent.")
+        return False
+    
     try:
         # Create message root as 'related' to hold inline images
         msg = MIMEMultipart("related")
@@ -228,6 +237,13 @@ async def subscribe_newsletter(data: NewsletterSubscribeRequest):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="A valid email address is required."
+            )
+
+        # Check if SMTP is configured
+        if not SENDER_PASSWORD or not SENDER_PASSWORD.strip():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Email service is temporarily unavailable. Please try again later."
             )
 
         # Send confirmation email
