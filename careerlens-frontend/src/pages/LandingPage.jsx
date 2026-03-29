@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import LiveAnalysisPanel from '../components/LiveAnalysisPanel';
 import FeatureCard from '../components/FeatureCard';
 import Logo from '../components/Logo';
+import { apiUrl } from '../services/api';
 
 /* ── Rotating taglines ────────────────────────────────────────────── */
 const taglines = [
@@ -725,7 +726,7 @@ export default function LandingPage() {
                       message: formData.message
                     };
 
-                    const response = await fetch('/api/contact/submit', {
+                    const response = await fetch(apiUrl('/contact/submit'), {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify(payload)
@@ -1199,7 +1200,7 @@ export default function LandingPage() {
                 setNlLoading(true);
                 setNlStatus(null);
                 try {
-                  const res = await fetch('/api/newsletter/subscribe', {
+                  const res = await fetch(apiUrl('/newsletter/subscribe'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: nlEmail }),
