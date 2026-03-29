@@ -37,7 +37,7 @@ def hash_password(password: str) -> str:
     """Hash a password using bcrypt"""
     # Enforce password length limit for bcrypt (72 bytes max)
     if len(password.encode('utf-8')) > 72:
-        raise ValueError("Password cannot exceed 72 characters")
+        raise ValueError("Password must be 72 bytes or fewer")
     
     try:
         # Suppress passlib truncation warnings

@@ -101,6 +101,11 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
         )
     
     except Exception as e:
+        if isinstance(e, ValueError):
+            raise HTTPException(
+                status_code=400,
+                detail=str(e)
+            )
         db.rollback()
         raise HTTPException(
             status_code=500,
@@ -601,6 +606,11 @@ async def reset_password(request: ResetPasswordRequest, db: Session = Depends(ge
         )
     
     except Exception as e:
+        if isinstance(e, ValueError):
+            raise HTTPException(
+                status_code=400,
+                detail=str(e)
+            )
         db.rollback()
         raise HTTPException(
             status_code=500,

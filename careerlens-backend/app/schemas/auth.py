@@ -27,6 +27,8 @@ class RegisterRequest(BaseModel):
     @validator('password')
     def validate_password(cls, v):
         """Password must contain uppercase, lowercase, number, special char"""
+        if len(v.encode('utf-8')) > 72:
+            raise ValueError('Password must be 72 bytes or fewer')
         if not re.search(r'[A-Z]', v):
             raise ValueError('Password must contain uppercase letters')
         if not re.search(r'[a-z]', v):
@@ -164,6 +166,8 @@ class ResetPasswordRequest(BaseModel):
     @validator('new_password')
     def validate_password(cls, v):
         """Password must contain uppercase, lowercase, number, special char"""
+        if len(v.encode('utf-8')) > 72:
+            raise ValueError('Password must be 72 bytes or fewer')
         if not re.search(r'[A-Z]', v):
             raise ValueError('Password must contain uppercase letters')
         if not re.search(r'[a-z]', v):
