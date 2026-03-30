@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import APP_TITLE, APP_VERSION, APP_DESCRIPTION
 from app.core.database import engine, Base
 from app.core.schema_migrations import run_schema_migrations
+from app.services.email_provider import init_email_provider
 
 # Import ALL models so Base.metadata registers every table
 import app.models  # noqa: F401
@@ -36,6 +37,7 @@ async def lifespan(application: FastAPI):
     """Create DB tables on startup (safe – won't drop existing)."""
     Base.metadata.create_all(bind=engine)
     run_schema_migrations(engine)
+    init_email_provider()
 
     yield
 
