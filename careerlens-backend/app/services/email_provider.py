@@ -56,6 +56,7 @@ class SMTPEmailProvider(EmailProvider):
             self.sender_email = configured_sender
         self.sender_name = os.getenv("SMTP_FROM_NAME", "CareerLens")
         self.sender_password = os.getenv("SMTP_PASSWORD") or os.getenv("SENDER_PASSWORD")
+        self.contact_form_email = os.getenv("CONTACT_FORM_EMAIL", self.sender_email or self.smtp_user or "")
 
     def is_configured(self) -> bool:
         return bool(self.smtp_user and self.sender_password)
@@ -157,14 +158,17 @@ class SMTPEmailProvider(EmailProvider):
             return False
         
         try:
-            recipient_email = contact_data.get("email", "")
+            recipient_email = self.contact_form_email
             name = contact_data.get("name", "")
             subject = contact_data.get("subject", "Contact Form Submission")
+            sender_email = contact_data.get("email", "")
             
             msg = MIMEMultipart("related")
             msg["Subject"] = f"Contact Form Received - {subject}"
             msg["From"] = f"{self.sender_name} <{self.sender_email}>"
             msg["To"] = recipient_email
+            if sender_email:
+              msg["Reply-To"] = sender_email
 
             msg_alternative = MIMEMultipart("alternative")
             msg.attach(msg_alternative)
@@ -447,30 +451,46 @@ class ResendEmailProvider(EmailProvider):
         self.sender_name = os.getenv("SMTP_FROM_NAME", "CareerLens")
         self.from_header = f"{self.sender_name} <{self.sender_email}>"
         self.api_url = "https://api.resend.com/emails"
+        self.contact_form_email = os.getenv("CONTACT_FORM_EMAIL", self.sender_email)
+        self.logo_url = os.getenv("EMAIL_LOGO_URL", "https://www.careerlens.in/careerlens-logo.png")
     
     def is_configured(self) -> bool:
         return bool(self.api_key and self.api_key.strip())
     
-    def _send_email(self, to: str, subject: str, html: str) -> bool:
+    def _send_email(
+        self,
+        to: str,
+        subject: str,
+        html: str,
+        text: Optional[str] = None,
+        reply_to: Optional[str] = None,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> bool:
         """Send email via Resend API"""
         if not self.is_configured():
             print("Resend: API key not configured")
             return False
         
         try:
-            headers = {
+            api_headers = {
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
             }
             
             payload = {
                 "from": self.from_header,
-                "to": to,
+                "to": [to],
                 "subject": subject,
                 "html": html
             }
+            if text:
+                payload["text"] = text
+            if reply_to:
+                payload["reply_to"] = reply_to
+            if headers:
+                payload["headers"] = headers
             
-            response = requests.post(self.api_url, json=payload, headers=headers, timeout=10)
+            response = requests.post(self.api_url, json=payload, headers=api_headers, timeout=10)
             
             if response.status_code in [200, 201]:
                 print(f"Resend: Email sent to {to} (ID: {response.json().get('id', 'unknown')})")
@@ -496,23 +516,72 @@ class ResendEmailProvider(EmailProvider):
         }.get(purpose, "Verification Code - CareerLens")
         
         html = self._get_otp_email_body(otp, purpose)
-        return self._send_email(recipient_email, subject, html)
+        text = self._get_otp_email_text(otp, purpose)
+        return self._send_email(recipient_email, subject, html, text=text)
     
     def send_newsletter_confirmation(self, subscriber_email: str) -> bool:
         """Send newsletter confirmation via Resend"""
-        subject = "Welcome to the CareerLens Newsletter! 🎉"
+        subject = "Welcome to the CareerLens Newsletter"
         html = self._get_newsletter_email_body()
-        return self._send_email(subscriber_email, subject, html)
+        text = self._get_newsletter_email_text()
+        headers = {
+            "List-Unsubscribe": "<mailto:support@careerlens.in?subject=unsubscribe>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        }
+        return self._send_email(subscriber_email, subject, html, text=text, headers=headers)
     
     def send_contact_email(self, contact_data: Dict[str, str]) -> bool:
-        """Send contact form confirmation via Resend"""
-        recipient_email = contact_data.get("email", "")
+        """Send contact form alert to admin inbox via Resend"""
+        recipient_email = self.contact_form_email
         name = contact_data.get("name", "")
+        sender_email = contact_data.get("email", "")
         subject = contact_data.get("subject", "Contact Form Submission")
+        role = contact_data.get("role", "")
+        message = contact_data.get("message", "")
         
-        email_subject = f"Contact Form Received - {subject}"
+        email_subject = f"CareerLens Contact: {subject} - From {name}"
         html = self._get_contact_email_body(name, subject)
-        return self._send_email(recipient_email, email_subject, html)
+        text = self._get_contact_email_text(name, sender_email, role, subject, message)
+        return self._send_email(recipient_email, email_subject, html, text=text, reply_to=sender_email)
+
+    def _get_otp_email_text(self, otp: str, purpose: str) -> str:
+        title = {
+            "registration": "Email Verification",
+            "login_2fa": "Two-Step Authentication",
+            "password_reset": "Password Reset Request"
+        }.get(purpose, "Verification Code")
+        return (
+            f"CareerLens - {title}\n\n"
+            f"Your verification code is: {otp}\n"
+            "This code expires in 10 minutes.\n"
+            "Do not share this code with anyone."
+        )
+
+    def _get_newsletter_email_text(self) -> str:
+        return (
+            "Welcome to the CareerLens Newsletter!\n\n"
+            "Thank you for subscribing. You will receive career insights, product updates, "
+            "and practical guidance from the CareerLens team.\n\n"
+            "To unsubscribe, contact support@careerlens.in"
+        )
+
+    def _get_contact_email_text(
+        self,
+        name: str,
+        email: str,
+        role: str,
+        subject: str,
+        message: str,
+    ) -> str:
+        return (
+            "New CareerLens contact form submission\n\n"
+            f"Name: {name}\n"
+            f"Email: {email}\n"
+            f"Role: {role}\n"
+            f"Subject: {subject}\n\n"
+            "Message:\n"
+            f"{message}"
+        )
     
     def _get_otp_email_body(self, otp: str, purpose: str) -> str:
         """Generate OTP email HTML body (without CID for Resend)"""
@@ -550,7 +619,7 @@ class ResendEmailProvider(EmailProvider):
                   
                   <tr>
                     <td align="center" style="padding: 40px 40px 20px 40px;">
-                      <div style="font-size: 32px; font-weight: 700; color: #00C2CB;">CareerLens</div>
+                      <img src="{self.logo_url}" alt="CareerLens Logo" width="180" style="display: block; outline: none; border: none; text-decoration: none;" />
                     </td>
                   </tr>
                   
@@ -635,7 +704,7 @@ class ResendEmailProvider(EmailProvider):
 
                   <tr>
                     <td align="center" style="padding: 40px 40px 20px 40px;">
-                      <div style="font-size: 32px; font-weight: 700; color: #00C2CB;">CareerLens</div>
+                      <img src="{self.logo_url}" alt="CareerLens Logo" width="180" style="display: block; outline: none; border: none; text-decoration: none;" />
                     </td>
                   </tr>
                   
@@ -710,7 +779,7 @@ class ResendEmailProvider(EmailProvider):
 
                   <tr>
                     <td align="center" style="padding: 40px 40px 20px 40px;">
-                      <div style="font-size: 32px; font-weight: 700; color: #00C2CB;">CareerLens</div>
+                      <img src="{self.logo_url}" alt="CareerLens Logo" width="180" style="display: block; outline: none; border: none; text-decoration: none;" />
                     </td>
                   </tr>
                   
