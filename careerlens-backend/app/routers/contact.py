@@ -4,7 +4,6 @@ Handles contact form submissions and sends emails
 """
 
 import smtplib
-import threading
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
@@ -212,12 +211,6 @@ Message:
         return False
 
 
-def send_contact_email_async(contact_data: ContactFormRequest) -> None:
-    """Fire-and-forget contact email to avoid request timeouts."""
-    thread = threading.Thread(target=send_contact_email, args=(contact_data,), daemon=True)
-    thread.start()
-
-
 # ── Routes ──────────────────────────────────────────────────────────
 @router.post("/submit", response_model=ContactFormResponse)
 async def submit_contact_form(contact_data: ContactFormRequest):
@@ -261,8 +254,13 @@ async def submit_contact_form(contact_data: ContactFormRequest):
                 detail="Message is required (minimum 10 characters)"
             )
 
-        # Queue email in background to keep API responsive.
-        send_contact_email_async(contact_data)
+        # Confirm send before returning success to avoid false positives.
+        email_sent = send_contact_email(contact_data)
+        if not email_sent:
+          raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Could not send contact email right now. Please try again later."
+          )
 
         return ContactFormResponse(
             success=True,

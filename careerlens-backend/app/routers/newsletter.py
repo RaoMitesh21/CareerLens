@@ -4,7 +4,6 @@ Handles newsletter signups and sends confirmation emails via SMTP
 """
 
 import smtplib
-import threading
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
@@ -225,12 +224,6 @@ If you wish to unsubscribe, please contact us at support@careerlens.in.
         return False
 
 
-def send_newsletter_confirmation_async(subscriber_email: str) -> None:
-    """Fire-and-forget newsletter email to avoid request timeouts."""
-    thread = threading.Thread(target=send_newsletter_confirmation, args=(subscriber_email,), daemon=True)
-    thread.start()
-
-
 # ── Routes ──────────────────────────────────────────────────────────
 @router.post("/subscribe", response_model=NewsletterSubscribeResponse)
 async def subscribe_newsletter(data: NewsletterSubscribeRequest):
@@ -252,8 +245,13 @@ async def subscribe_newsletter(data: NewsletterSubscribeRequest):
                 detail="Email service is temporarily unavailable. Please try again later."
             )
 
-        # Queue confirmation email in background to keep API responsive.
-        send_newsletter_confirmation_async(data.email)
+        # Confirm send before returning success to avoid false positives.
+        email_sent = send_newsletter_confirmation(data.email)
+        if not email_sent:
+          raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Could not send confirmation email right now. Please try again later."
+          )
 
         return NewsletterSubscribeResponse(
             success=True,

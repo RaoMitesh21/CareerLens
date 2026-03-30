@@ -80,14 +80,22 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
             expires_at=datetime.utcnow() + timedelta(minutes=10)
         )
         
-        # Save to database
+        # Save staged records, but only commit after OTP delivery succeeds.
         db.add(user)
         db.add(otp_record)
+        db.flush()
+
+        email_sent = send_otp_email(request.email, otp, "registration")
+        if not email_sent:
+            db.rollback()
+            raise HTTPException(
+                status_code=503,
+                detail="Email service is temporarily unavailable. Please try again."
+            )
+
         db.commit()
         db.refresh(user)
-        
-        # Attempt OTP delivery but do not fail registration if SMTP is temporarily unavailable.
-        send_otp_email(request.email, otp, "registration")
+
         log_auth_event(user.id, "REGISTRATION_INITIATED", request.email)
         
         return RegisterResponse(
@@ -256,10 +264,16 @@ async def resend_otp_registration(request: dict, db: Session = Depends(get_db)):
     )
     
     db.add(otp_record)
+
+    email_sent = send_otp_email(email, otp, "registration")
+    if not email_sent:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Email service is temporarily unavailable. Please try again."
+        )
+
     db.commit()
-    
-    # Send OTP email (async - returns immediately)
-    send_otp_email(email, otp, "registration")
     
     return {
         "message": "OTP resent to email",
@@ -298,10 +312,16 @@ async def resend_otp_reset(request: dict, db: Session = Depends(get_db)):
     )
     
     db.add(otp_record)
+
+    email_sent = send_otp_email(email, otp, "password_reset")
+    if not email_sent:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Email service is temporarily unavailable. Please try again."
+        )
+
     db.commit()
-    
-    # Send OTP email (async - returns immediately)
-    send_otp_email(email, otp, "password_reset")
     
     return {
         "message": "OTP resent to email",
@@ -340,10 +360,16 @@ async def resend_otp_login(request: dict, db: Session = Depends(get_db)):
     )
     
     db.add(otp_record)
+
+    email_sent = send_otp_email(email, otp, "login_2fa")
+    if not email_sent:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Email service is temporarily unavailable. Please try again."
+        )
+
     db.commit()
-    
-    # Send OTP email (async - returns immediately)
-    send_otp_email(email, otp, "login_2fa")
     
     return {
         "message": "OTP resent to email",
@@ -404,12 +430,18 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
             expires_at=datetime.utcnow() + timedelta(minutes=10)
         )
         
-        # Save OTP
+        # Save OTP and commit only after confirmed email delivery.
         db.add(otp_record)
+
+        email_sent = send_otp_email(user.email, otp, "login_2fa")
+        if not email_sent:
+            db.rollback()
+            raise HTTPException(
+                status_code=503,
+                detail="Email service is temporarily unavailable. Please try again."
+            )
+
         db.commit()
-        
-        # Send OTP email (async - returns immediately)
-        send_otp_email(user.email, otp, "login_2fa")
         
         log_auth_event(user.id, "LOGIN_INITIATED", user.email)
         
@@ -542,12 +574,18 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
             expires_at=datetime.utcnow() + timedelta(minutes=15)
         )
         
-        # Save OTP
+        # Save OTP and commit only after confirmed email delivery.
         db.add(otp_record)
+
+        email_sent = send_otp_email(user.email, otp, "password_reset")
+        if not email_sent:
+            db.rollback()
+            raise HTTPException(
+                status_code=503,
+                detail="Email service is temporarily unavailable. Please try again."
+            )
+
         db.commit()
-        
-        # Send OTP email (async - returns immediately)
-        send_otp_email(user.email, otp, "password_reset")
         
         log_auth_event(user.id, "PASSWORD_RESET_REQUESTED", user.email)
         
