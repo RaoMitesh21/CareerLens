@@ -408,22 +408,24 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
     # Find user by login_id or email
     user = db.query(User).filter(
         or_(
-            func.lower(User.login_id) == identifier_lower,
-            func.lower(User.email) == identifier_lower,
+            User.login_id == identifier,
+            User.email == identifier,
+            func.lower(func.trim(User.login_id)) == identifier_lower,
+            func.lower(func.trim(User.email)) == identifier_lower,
         )
     ).first()
     
     if not user:
         raise HTTPException(
             status_code=401,
-            detail="Invalid login ID or email"
+            detail="Invalid credentials"
         )
     
     # Verify password
     if not verify_password(request.password, user.password_hash):
         raise HTTPException(
             status_code=401,
-            detail="Invalid password"
+            detail="Invalid credentials"
         )
     
     # Check if email verified
@@ -579,8 +581,10 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
     # Find user by email or login_id
     user = db.query(User).filter(
         or_(
-            func.lower(User.email) == identifier_lower,
-            func.lower(User.login_id) == identifier_lower,
+            User.email == identifier,
+            User.login_id == identifier,
+            func.lower(func.trim(User.email)) == identifier_lower,
+            func.lower(func.trim(User.login_id)) == identifier_lower,
         )
     ).first()
     
