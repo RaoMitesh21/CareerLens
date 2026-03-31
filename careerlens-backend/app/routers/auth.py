@@ -4,6 +4,7 @@ Register, Login, OTP Verification, Password Reset
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import Optional
@@ -30,6 +31,14 @@ from app.services.auth_utils import (
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
+def _normalize_identifier(value: str) -> str:
+    return (value or "").strip()
+
+
+def _normalize_email(value: str) -> str:
+    return _normalize_identifier(value).lower()
+
+
 # ============================================
 # 1. REGISTRATION
 # ============================================
@@ -41,16 +50,19 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
     Sends OTP to email for verification
     """
     
-    # Check if email already exists
-    existing_user = db.query(User).filter(User.email == request.email).first()
+    normalized_email = _normalize_email(request.email)
+    normalized_login_id = _normalize_identifier(request.login_id)
+
+    # Check if email already exists (case-insensitive)
+    existing_user = db.query(User).filter(func.lower(User.email) == normalized_email).first()
     if existing_user:
         raise HTTPException(
             status_code=400,
             detail="Email already registered"
         )
     
-    # Check if login_id already exists
-    existing_login = db.query(User).filter(User.login_id == request.login_id).first()
+    # Check if login_id already exists (case-insensitive)
+    existing_login = db.query(User).filter(func.lower(User.login_id) == normalized_login_id.lower()).first()
     if existing_login:
         raise HTTPException(
             status_code=400,
@@ -64,8 +76,8 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
         # Create user
         user = User(
             name=request.name,
-            email=request.email,
-            login_id=request.login_id,
+            email=normalized_email,
+            login_id=normalized_login_id,
             password_hash=hashed_password,
             role=UserRole(request.role),
             created_at=datetime.utcnow()
@@ -74,7 +86,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
         # Generate OTP
         otp = generate_otp()
         otp_record = OTPRecord(
-            email=request.email,
+            email=normalized_email,
             otp=otp,
             purpose="registration",
             expires_at=datetime.utcnow() + timedelta(minutes=10)
@@ -85,7 +97,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
         db.add(otp_record)
         db.flush()
 
-        email_sent = send_otp_email(request.email, otp, "registration")
+        email_sent = send_otp_email(normalized_email, otp, "registration")
         if not email_sent:
             db.rollback()
             raise HTTPException(
@@ -133,8 +145,10 @@ async def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
     Verify OTP during registration, login, or password reset
     """
     
+    normalized_email = _normalize_email(request.email)
+
     # Find user
-    user = db.query(User).filter(User.email == request.email).first()
+    user = db.query(User).filter(func.lower(User.email) == normalized_email).first()
     if not user:
         raise HTTPException(
             status_code=404,
@@ -143,7 +157,7 @@ async def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
     
     # Find OTP record - can be for registration, login_2fa, or password_reset
     otp_record = db.query(OTPRecord).filter(
-        OTPRecord.email == request.email,
+        func.lower(OTPRecord.email) == normalized_email,
         OTPRecord.otp == request.otp
     ).first()
     
@@ -238,12 +252,12 @@ async def resend_otp_registration(request: dict, db: Session = Depends(get_db)):
     """
     Resend OTP for registration
     """
-    email = request.get('email')
+    email = _normalize_email(request.get('email', ''))
     if not email:
         raise HTTPException(status_code=400, detail="Email required")
     
     # Find user
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(func.lower(User.email) == email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -286,12 +300,12 @@ async def resend_otp_reset(request: dict, db: Session = Depends(get_db)):
     """
     Resend OTP for password reset
     """
-    email = request.get('email')
+    email = _normalize_email(request.get('email', ''))
     if not email:
         raise HTTPException(status_code=400, detail="Email required")
     
     # Find user
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(func.lower(User.email) == email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -334,12 +348,12 @@ async def resend_otp_login(request: dict, db: Session = Depends(get_db)):
     """
     Resend OTP for login 2FA
     """
-    email = request.get('email')
+    email = _normalize_email(request.get('email', ''))
     if not email:
         raise HTTPException(status_code=400, detail="Email required")
     
     # Find user
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(func.lower(User.email) == email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -388,9 +402,15 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
     Initiates 2FA with OTP
     """
     
+    identifier = _normalize_identifier(request.login_id)
+    identifier_lower = identifier.lower()
+
     # Find user by login_id or email
     user = db.query(User).filter(
-        (User.login_id == request.login_id) | (User.email == request.login_id)
+        or_(
+            func.lower(User.login_id) == identifier_lower,
+            func.lower(User.email) == identifier_lower,
+        )
     ).first()
     
     if not user:
@@ -475,9 +495,11 @@ async def verify_login_otp(request: VerifyLoginOTPRequest, db: Session = Depends
     Verify 2FA OTP and issue JWT token
     """
     
+    normalized_email = _normalize_email(request.email)
+
     # Find OTP record
     otp_record = db.query(OTPRecord).filter(
-        OTPRecord.email == request.email,
+        func.lower(OTPRecord.email) == normalized_email,
         OTPRecord.otp == request.otp,
         OTPRecord.purpose == "login_2fa"
     ).first()
@@ -496,7 +518,7 @@ async def verify_login_otp(request: VerifyLoginOTPRequest, db: Session = Depends
         )
     
     # Find user
-    user = db.query(User).filter(User.email == request.email).first()
+    user = db.query(User).filter(func.lower(User.email) == normalized_email).first()
     if not user:
         raise HTTPException(
             status_code=404,
@@ -551,10 +573,15 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
     Sends OTP to registered email
     """
     
+    identifier = _normalize_identifier(request.email_or_username)
+    identifier_lower = identifier.lower()
+
     # Find user by email or login_id
     user = db.query(User).filter(
-        (User.email == request.email_or_username) |
-        (User.login_id == request.email_or_username)
+        or_(
+            func.lower(User.email) == identifier_lower,
+            func.lower(User.login_id) == identifier_lower,
+        )
     ).first()
     
     if not user:
@@ -612,9 +639,11 @@ async def reset_password(request: ResetPasswordRequest, db: Session = Depends(ge
     Reset password with OTP verification
     """
     
+    normalized_email = _normalize_email(request.email)
+
     # Find OTP record
     otp_record = db.query(OTPRecord).filter(
-        OTPRecord.email == request.email,
+        func.lower(OTPRecord.email) == normalized_email,
         OTPRecord.otp == request.otp,
         OTPRecord.purpose == "password_reset"
     ).first()
@@ -633,7 +662,7 @@ async def reset_password(request: ResetPasswordRequest, db: Session = Depends(ge
         )
     
     # Find user
-    user = db.query(User).filter(User.email == request.email).first()
+    user = db.query(User).filter(func.lower(User.email) == normalized_email).first()
     if not user:
         raise HTTPException(
             status_code=404,
