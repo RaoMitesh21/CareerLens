@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Private/authenticated or utility routes
+Disallow: /student/
+Disallow: /recruiter/
+Disallow: /results
+Disallow: /verify-otp
+Disallow: /reset-password
+Disallow: /forgot-password
+
+Sitemap: https://www.careerlens.in/sitemap.xml

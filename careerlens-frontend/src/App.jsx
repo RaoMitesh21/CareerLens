@@ -15,6 +15,7 @@ import RecruiterDashboard from './pages/dashboard/RecruiterDashboard';
 
 // Legacy Pages
 import Navbar from './components/Navbar';
+import SeoManager from './components/SeoManager';
 import LandingPage from './pages/LandingPage';
 import ResultsPage from './pages/ResultsPage';
 import DemoPage from './pages/DemoPage';
@@ -53,7 +54,9 @@ const ProtectedRoute = ({ children, requiredRole }) => {
 
 function AppRoutes() {
   return (
-    <Routes>
+    <>
+      <SeoManager />
+      <Routes>
       {/* ═══════════════════════════════════════════════════════════════
           PUBLIC PAGES (Always accessible)
           ═══════════════════════════════════════════════════════════════ */}
@@ -169,7 +172,8 @@ function AppRoutes() {
       
       {/* Catch all — redirect to home */}
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </>
   );
 }
 
