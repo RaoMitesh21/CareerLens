@@ -119,6 +119,32 @@ export default function LandingPage() {
     return () => clearInterval(timer);
   }, []);
 
+  const formatApiError = (errorPayload, fallback) => {
+    if (!errorPayload) return fallback;
+
+    const detail = errorPayload.detail;
+    if (typeof detail === 'string') return detail;
+
+    if (Array.isArray(detail)) {
+      const messages = detail
+        .map((item) => {
+          if (!item) return null;
+          if (typeof item === 'string') return item;
+          if (typeof item.msg === 'string') {
+            const field = Array.isArray(item.loc) ? item.loc[item.loc.length - 1] : null;
+            return field ? `${field}: ${item.msg}` : item.msg;
+          }
+          return null;
+        })
+        .filter(Boolean);
+
+      if (messages.length > 0) return messages.join(' | ');
+    }
+
+    if (typeof errorPayload.message === 'string') return errorPayload.message;
+    return fallback;
+  };
+
   const [line1, line2] = taglines[tagIdx].split('\n');
 
   return (
@@ -735,7 +761,7 @@ export default function LandingPage() {
                     if (!response.ok) {
                       const error = await response.json();
                       setFormStatus('error');
-                      setFormMessage(error.detail || 'Failed to send message. Please try again.');
+                      setFormMessage(formatApiError(error, 'Failed to send message. Please try again.'));
                       setFormLoading(false);
                       return;
                     }

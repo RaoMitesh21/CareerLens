@@ -5,8 +5,10 @@ Run with:  uvicorn app.main:app --reload
 """
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import APP_TITLE, APP_VERSION, APP_DESCRIPTION
 from app.core.database import engine, Base
@@ -49,6 +51,11 @@ app = FastAPI(
     version=APP_VERSION,
     lifespan=lifespan,
 )
+
+# Serve static assets (email logo, etc.) from a stable backend URL.
+static_dir = Path(__file__).resolve().parent / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 # ── CORS ────────────────────────────────────────────────────────────
 app.add_middleware(

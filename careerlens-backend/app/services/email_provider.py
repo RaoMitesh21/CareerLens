@@ -452,7 +452,7 @@ class ResendEmailProvider(EmailProvider):
         self.from_header = f"{self.sender_name} <{self.sender_email}>"
         self.api_url = "https://api.resend.com/emails"
         self.contact_form_email = os.getenv("CONTACT_FORM_EMAIL", self.sender_email)
-        self.logo_url = os.getenv("EMAIL_LOGO_URL", "https://www.careerlens.in/careerlens-logo.png")
+        self.logo_url = os.getenv("EMAIL_LOGO_URL", "https://careerlens-api-imy1.onrender.com/static/careerlens-logo.png")
     
     def is_configured(self) -> bool:
         return bool(self.api_key and self.api_key.strip())
@@ -620,6 +620,7 @@ class ResendEmailProvider(EmailProvider):
                   <tr>
                     <td align="center" style="padding: 40px 40px 20px 40px;">
                       <img src="{self.logo_url}" alt="CareerLens Logo" width="180" style="display: block; outline: none; border: none; text-decoration: none;" />
+                      <div style="margin-top: 8px; font-size: 14px; color: #334155; font-weight: 700; letter-spacing: 0.3px;">CareerLens</div>
                     </td>
                   </tr>
                   
@@ -705,6 +706,7 @@ class ResendEmailProvider(EmailProvider):
                   <tr>
                     <td align="center" style="padding: 40px 40px 20px 40px;">
                       <img src="{self.logo_url}" alt="CareerLens Logo" width="180" style="display: block; outline: none; border: none; text-decoration: none;" />
+                      <div style="margin-top: 8px; font-size: 14px; color: #334155; font-weight: 700; letter-spacing: 0.3px;">CareerLens</div>
                     </td>
                   </tr>
                   
@@ -780,6 +782,7 @@ class ResendEmailProvider(EmailProvider):
                   <tr>
                     <td align="center" style="padding: 40px 40px 20px 40px;">
                       <img src="{self.logo_url}" alt="CareerLens Logo" width="180" style="display: block; outline: none; border: none; text-decoration: none;" />
+                      <div style="margin-top: 8px; font-size: 14px; color: #334155; font-weight: 700; letter-spacing: 0.3px;">CareerLens</div>
                     </td>
                   </tr>
                   
