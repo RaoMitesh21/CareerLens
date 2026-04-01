@@ -1305,9 +1305,9 @@ export default function LandingPage() {
       {/* Noise overlay */}
       <div className="noise-overlay" />
 
-      {/* Premium Get Started Card - appears after 30 seconds */}
+      {/* Premium Get Started Card - appears after 5 seconds */}
       <PremiumGetStartedCard 
-        delaySeconds={30} 
+        delaySeconds={5} 
         navigateTo="/signup"
         variant="default"
       />

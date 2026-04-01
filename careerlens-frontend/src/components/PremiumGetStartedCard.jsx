@@ -33,7 +33,7 @@ const getRandomTagline = () => {
 };
 
 export default function PremiumGetStartedCard({ 
-  delaySeconds = 30, 
+  delaySeconds = 5, 
   onClose = null,
   navigateTo = '/signup',
   variant = 'default' // 'default' or 'minimal'
@@ -44,7 +44,8 @@ export default function PremiumGetStartedCard({
 
   useEffect(() => {
     // Generate random tagline once when component mounts
-    setTagline(getRandomTagline());
+    const newTagline = getRandomTagline();
+    setTagline(newTagline);
 
     // Timer to show card after delay
     const timer = setTimeout(() => {
@@ -112,7 +113,7 @@ export default function PremiumGetStartedCard({
             <div className="bg-white rounded-lg sm:rounded-xl shadow-2xl border border-indigo-100 p-3 sm:p-4 w-full">
               <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <Sparkles className="w-4 sm:w-5 h-4 sm:h-5 text-indigo-600 flex-shrink-0" />
+                  <Sparkles className="w-4 sm:w-5 h-4 sm:h-5 text-cyan-600 flex-shrink-0" />
                   <span className="text-xs sm:text-sm font-semibold text-gray-900">Premium</span>
                 </div>
                 <button
@@ -125,7 +126,7 @@ export default function PremiumGetStartedCard({
               <p className="text-xs sm:text-sm text-gray-700 mb-4 font-medium line-clamp-3">{tagline}</p>
               <button
                 onClick={handleGetStarted}
-                className="w-full bg-indigo-600 text-white py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold hover:bg-indigo-700 transition-all active:scale-95"
+                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold hover:from-cyan-700 hover:to-blue-700 transition-all active:scale-95"
               >
                 Get Started
               </button>
@@ -161,7 +162,7 @@ export default function PremiumGetStartedCard({
             onClick={handleClose}
           >
             <motion.div
-              className="bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-indigo-100 w-full max-w-sm overflow-hidden"
+              className="bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-cyan-100 w-full max-w-sm overflow-hidden"
               variants={cardVariants}
               initial="hidden"
               animate="visible"
@@ -169,10 +170,10 @@ export default function PremiumGetStartedCard({
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header with Gradient */}
-              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 sm:px-6 pt-6 pb-6 sm:pb-8 relative overflow-hidden">
+              <div className="bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 px-4 sm:px-6 pt-6 pb-6 sm:pb-8 relative overflow-hidden">
                 {/* Decorative circles */}
                 <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-xl" />
-                <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-400/10 rounded-full blur-xl" />
+                <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-400/10 rounded-full blur-xl" />
 
                 <div className="relative z-10 flex items-start justify-between mb-4">
                   <div className="flex items-center gap-2">
@@ -217,7 +218,7 @@ export default function PremiumGetStartedCard({
                     'Just 2 minutes to get started',
                   ].map((benefit, i) => (
                     <li key={i} className="flex items-center gap-3 text-xs sm:text-sm text-gray-700">
-                      <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full flex-shrink-0" />
+                      <div className="w-1.5 h-1.5 bg-cyan-600 rounded-full flex-shrink-0" />
                       <span>{benefit}</span>
                     </li>
                   ))}
@@ -226,7 +227,7 @@ export default function PremiumGetStartedCard({
                 {/* CTA Button */}
                 <motion.button
                   onClick={handleGetStarted}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-semibold flex items-center justify-center gap-2 text-sm sm:text-base hover:shadow-lg hover:from-indigo-700 hover:to-purple-700 transition-all active:scale-95"
+                  className="w-full bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 text-white py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-semibold flex items-center justify-center gap-2 text-sm sm:text-base hover:shadow-lg hover:from-cyan-700 hover:via-blue-700 hover:to-purple-700 transition-all active:scale-95"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
