@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { X, Sparkles, ArrowRight } from 'lucide-react';
 
-// App-related taglines pool - different for each trigger
-const taglinePool = [
+const taglines = [
   'Discover Your Hidden Skills Gap',
   'AI-Powered Career Clarity Awaits',
   'Unlock Your True Market Value',
@@ -14,7 +13,6 @@ const taglinePool = [
   'See what employers see in you',
   'Level up your career game',
   'Data-driven job readiness',
-  'From overlooked to overqualified',
   'Your career clarity starts here',
   'Power up your job search',
   'Decode the hiring code',
@@ -27,29 +25,23 @@ const taglinePool = [
   'Master your skill stack',
 ];
 
-// Get random tagline from pool
-const getRandomTagline = () => {
-  return taglinePool[Math.floor(Math.random() * taglinePool.length)];
-};
-
 export default function PremiumGetStartedCard({ 
   delaySeconds = 5, 
-  onClose = null,
   navigateTo = '/signup',
-  variant = 'default' // 'default' or 'minimal'
+  variant = 'default'
 }) {
   const [isVisible, setIsVisible] = useState(false);
   const [tagline, setTagline] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Generate random tagline once when component mounts
-    const newTagline = getRandomTagline();
-    setTagline(newTagline);
+    // Set random tagline
+    setTagline(taglines[Math.floor(Math.random() * taglines.length)]);
 
-    // Timer to show card after delay
+    // Show card after delay
     const timer = setTimeout(() => {
       setIsVisible(true);
+      console.log('🎯 Premium card should show now');
     }, delaySeconds * 1000);
 
     return () => clearTimeout(timer);
@@ -57,7 +49,6 @@ export default function PremiumGetStartedCard({
 
   const handleClose = () => {
     setIsVisible(false);
-    if (onClose) onClose();
   };
 
   const handleGetStarted = () => {
@@ -65,68 +56,35 @@ export default function PremiumGetStartedCard({
     navigate(navigateTo);
   };
 
-  // Card Animation Variants
-  const cardVariants = {
-    hidden: {
-      opacity: 0,
-      scale: 0.85,
-      y: 20,
-    },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      y: 0,
-      transition: {
-        type: 'spring',
-        stiffness: 300,
-        damping: 30,
-      },
-    },
-    exit: {
-      opacity: 0,
-      scale: 0.8,
-      y: -20,
-      transition: {
-        duration: 0.3,
-      },
-    },
-  };
-
-  const backdropVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1 },
-    exit: { opacity: 0 },
-  };
-
+  // Minimal variant (bottom-right corner)
   if (variant === 'minimal') {
-    // Minimal variant - corner notification (fully responsive)
     return (
       <AnimatePresence>
         {isVisible && (
           <motion.div
-            className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 max-w-[90vw] sm:max-w-xs"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 50 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[9999] w-[90vw] max-w-xs"
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            transition={{ duration: 0.3 }}
           >
-            <div className="bg-white rounded-lg sm:rounded-xl shadow-2xl border border-indigo-100 p-3 sm:p-4 w-full">
-              <div className="flex items-start justify-between gap-2 mb-3">
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Sparkles className="w-4 sm:w-5 h-4 sm:h-5 text-cyan-600 flex-shrink-0" />
-                  <span className="text-xs sm:text-sm font-semibold text-gray-900">Premium</span>
+            <div className="bg-white rounded-lg sm:rounded-xl shadow-2xl border border-cyan-200 p-3 sm:p-4">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 sm:w-5 h-4 sm:h-5 text-cyan-600" />
+                  <span className="text-xs sm:text-sm font-bold text-gray-900">Premium Card</span>
                 </div>
                 <button
                   onClick={handleClose}
-                  className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+                  className="text-gray-400 hover:text-gray-600 p-0.5"
                 >
                   <X className="w-4 sm:w-5 h-4 sm:h-5" />
                 </button>
               </div>
-              <p className="text-xs sm:text-sm text-gray-700 mb-4 font-medium line-clamp-3">{tagline}</p>
+              <p className="text-xs sm:text-sm text-gray-700 mb-3 font-medium line-clamp-2">"{tagline}"</p>
               <button
                 onClick={handleGetStarted}
-                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold hover:from-cyan-700 hover:to-blue-700 transition-all active:scale-95"
+                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white py-2 rounded-lg text-xs sm:text-sm font-semibold hover:from-cyan-700 hover:to-blue-700 transition-all"
               >
                 Get Started
               </button>
@@ -137,112 +95,102 @@ export default function PremiumGetStartedCard({
     );
   }
 
-  // Full variant - centered modal-style card (fully responsive)
+  // Default variant (full modal)
   return (
     <AnimatePresence>
       {isVisible && (
-        <>
+        <motion.div
+          className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-4 sm:p-0"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={handleClose}
+        >
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
-            variants={backdropVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            onClick={handleClose}
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
           />
 
-          {/* Premium Card */}
+          {/* Card */}
           <motion.div
-            className="fixed inset-0 flex items-center justify-center z-50 p-4 sm:p-6"
-            variants={backdropVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            onClick={handleClose}
+            className="relative bg-white rounded-2xl shadow-2xl border border-cyan-100 w-full sm:max-w-sm overflow-hidden"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ duration: 0.3 }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <motion.div
-              className="bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-cyan-100 w-full max-w-sm overflow-hidden"
-              variants={cardVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header with Gradient */}
-              <div className="bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 px-4 sm:px-6 pt-6 pb-6 sm:pb-8 relative overflow-hidden">
-                {/* Decorative circles */}
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-xl" />
-                <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-400/10 rounded-full blur-xl" />
+            {/* Header */}
+            <div className="bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 px-6 py-8 relative overflow-hidden">
+              {/* Decorative blobs */}
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
+              <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white/5 rounded-full blur-2xl" />
 
-                <div className="relative z-10 flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-5 sm:w-6 h-5 sm:h-6 text-white animate-pulse flex-shrink-0" />
-                    <span className="text-[10px] sm:text-xs font-bold text-white/90 uppercase tracking-widest">Premium</span>
-                  </div>
-                  <button
-                    onClick={handleClose}
-                    className="text-white/70 hover:text-white transition-colors hover:bg-white/10 rounded-lg p-1 flex-shrink-0"
-                  >
-                    <X className="w-5 sm:w-6 h-5 sm:h-6" />
-                  </button>
+              <div className="relative z-10 flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-6 h-6 text-white animate-pulse" />
+                  <span className="text-xs font-bold text-white/90 uppercase tracking-widest">Premium</span>
                 </div>
-
-                <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 leading-tight">
-                  Ready to Transform Your Career?
-                </h2>
+                <button
+                  onClick={handleClose}
+                  className="text-white/70 hover:text-white transition-colors p-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
-              {/* Content Area */}
-              <div className="p-4 sm:p-6">
-                {/* Random Tagline */}
-                <motion.p
-                  className="text-base sm:text-lg font-semibold text-gray-800 mb-4 sm:mb-6 leading-snug"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  "{tagline}"
-                </motion.p>
+              <h2 className="text-3xl font-bold text-white leading-tight">
+                Ready to Transform Your Career?
+              </h2>
+            </div>
 
-                {/* Benefits List */}
-                <motion.ul
-                  className="space-y-2 sm:space-y-3 mb-4 sm:mb-6"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  {[
-                    'AI-powered skill gap analysis',
-                    'Personalized career roadmap',
-                    'Just 2 minutes to get started',
-                  ].map((benefit, i) => (
-                    <li key={i} className="flex items-center gap-3 text-xs sm:text-sm text-gray-700">
-                      <div className="w-1.5 h-1.5 bg-cyan-600 rounded-full flex-shrink-0" />
-                      <span>{benefit}</span>
-                    </li>
-                  ))}
-                </motion.ul>
+            {/* Body */}
+            <div className="p-6">
+              {/* Tagline */}
+              <motion.p
+                className="text-lg font-semibold text-gray-800 mb-6 leading-snug"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+              >
+                "{tagline}"
+              </motion.p>
 
-                {/* CTA Button */}
-                <motion.button
-                  onClick={handleGetStarted}
-                  className="w-full bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 text-white py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-semibold flex items-center justify-center gap-2 text-sm sm:text-base hover:shadow-lg hover:from-cyan-700 hover:via-blue-700 hover:to-purple-700 transition-all active:scale-95"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Get Started Now
-                  <ArrowRight className="w-4 sm:w-5 h-4 sm:h-5" />
-                </motion.button>
+              {/* Benefits */}
+              <motion.div
+                className="space-y-3 mb-6"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.25 }}
+              >
+                {['AI-powered analysis', 'Personalized roadmap', '2 minutes to start'].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 text-sm text-gray-700">
+                    <div className="w-2 h-2 bg-cyan-600 rounded-full flex-shrink-0" />
+                    {item}
+                  </div>
+                ))}
+              </motion.div>
 
-                {/* Footer Text */}
-                <p className="text-center text-[10px] sm:text-xs text-gray-500 mt-3 sm:mt-4">
-                  No credit card required • Takes 2 minutes
-                </p>
-              </div>
-            </motion.div>
+              {/* CTA */}
+              <motion.button
+                onClick={handleGetStarted}
+                className="w-full bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 hover:shadow-lg transition-all"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                Get Started Now
+                <ArrowRight className="w-5 h-5" />
+              </motion.button>
+
+              <p className="text-center text-xs text-gray-500 mt-4">
+                No credit card required • Takes 2 minutes
+              </p>
+            </div>
           </motion.div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   );
