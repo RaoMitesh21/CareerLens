@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import LiveAnalysisPanel from '../components/LiveAnalysisPanel';
 import FeatureCard from '../components/FeatureCard';
 import Logo from '../components/Logo';
+import PremiumGetStartedCard from '../components/PremiumGetStartedCard';
 import { apiUrl } from '../services/api';
 
 /* ── Rotating taglines ────────────────────────────────────────────── */
@@ -1303,6 +1304,13 @@ export default function LandingPage() {
 
       {/* Noise overlay */}
       <div className="noise-overlay" />
+
+      {/* Premium Get Started Card - appears after 30 seconds */}
+      <PremiumGetStartedCard 
+        delaySeconds={30} 
+        navigateTo="/signup"
+        variant="default"
+      />
     </div>
   );
 }
