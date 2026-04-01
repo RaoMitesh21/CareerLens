@@ -23,6 +23,7 @@ from app.schemas.resume import (
     ResumeResponse,
     ResumeDetailResponse,
 )
+from typing import Optional, List
 
 router = APIRouter(prefix="/resumes", tags=["Resumes"])
 security = HTTPBearer(auto_error=False)
@@ -74,7 +75,7 @@ def upload_resume(
 
 @router.post("/upload-pdf", response_model=ResumeResponse, status_code=201, summary="Upload PDF resume")
 async def upload_pdf_resume(
-    user_id: int | None = Form(None, description="Optional user ID; must match authenticated user"),
+    user_id: Optional[int] = Form(None, description="Optional user ID; must match authenticated user"),
     file: UploadFile = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -175,9 +176,9 @@ def _extract_pdf_text(pdf_bytes: bytes) -> str:
         pdf_file.close()
 
 
-@router.get("", response_model=list[ResumeResponse], summary="List resumes")
+@router.get("", response_model=List[ResumeResponse], summary="List resumes")
 def list_resumes(
-    user_id: int | None = Query(None, description="Optional user ID filter; must match authenticated user"),
+    user_id: Optional[int] = Query(None, description="Optional user ID filter; must match authenticated user"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):

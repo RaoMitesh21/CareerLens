@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { LogoIcon } from '../components/Logo';
+import PremiumGetStartedCard from '../components/PremiumGetStartedCard';
 
 /* ═══════════════════════════════════════════════════════════════════
    DEMO DATA — Mitesh Rao × Data Scientist (sample analysis)
@@ -728,6 +729,13 @@ export default function DemoPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* Premium Get Started Card - appears after 30 seconds */}
+      <PremiumGetStartedCard 
+        delaySeconds={30} 
+        navigateTo="/signup"
+        variant="default"
+      />
 
       <div className="noise-overlay" />
     </div>
