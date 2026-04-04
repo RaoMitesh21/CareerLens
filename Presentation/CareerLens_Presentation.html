@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareerLens - AI-Powered Skill Gap Analyzer</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        :root{--p:#00C2CB;--s:#0ea5e9;--a:#7c3aed;--g:#232B32;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444;--lt:#f0f9ff;--bg:#FFFFFF;--t1:#0f172a;--t2:#475569;--bd:#e2e8f0;--sh:rgba(0,194,203,0.12)}
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+        body{font-family:'Inter',sans-serif;background:var(--bg);overflow:hidden;color:var(--t1);height:100vh;width:100vw}
+        ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--p);border-radius:4px}
+        .pc{width:100vw;height:100vh;overflow:hidden;position:relative}
+
+        /* ══════════════════════════ SLIDE ENGINE ══════════════════════════ */
+        .slide{width:100vw;height:100vh;display:none;flex-direction:column;justify-content:flex-start;align-items:center;padding:3rem 4rem 6rem;text-align:center;position:absolute;top:0;left:0;transition:all .65s cubic-bezier(.22,1,.36,1);transform:translateX(100%);opacity:0;overflow-y:auto;
+        background:linear-gradient(145deg,#ffffff 0%,#f8fbff 30%,#f0f7ff 60%,#e8f4fd 100%)}
+        .slide.active{display:flex;transform:translateX(0);opacity:1}
+
+        /* ── Animated mesh bg ── */
+        .slide::after{content:'';position:fixed;top:-20%;right:-15%;width:700px;height:700px;background:radial-gradient(circle,rgba(0,194,203,.08) 0%,rgba(14,165,233,.04) 40%,transparent 70%);border-radius:50%;pointer-events:none;z-index:0;animation:orbDrift 12s ease-in-out infinite}
+        .slide::before{content:'';position:fixed;bottom:-20%;left:-15%;width:600px;height:600px;background:radial-gradient(circle,rgba(124,58,237,.06) 0%,rgba(0,194,203,.03) 40%,transparent 70%);border-radius:50%;pointer-events:none;z-index:0;animation:orbDrift 15s ease-in-out infinite reverse}
+        @keyframes orbDrift{0%,100%{transform:translate(0,0) scale(1) rotate(0deg)}33%{transform:translate(40px,-30px) scale(1.08) rotate(5deg)}66%{transform:translate(-30px,40px) scale(.94) rotate(-3deg)}}
+
+        /* ── Content Wrapper ── */
+        .sw{max-width:1300px;width:100%;display:flex;flex-direction:column;align-items:center;padding:0;position:relative;z-index:2}
+
+        /* ══════════════ ENTRANCE ANIMATIONS ══════════════ */
+        .slide.active .sw>*{animation:riseIn .8s cubic-bezier(.22,1,.36,1) both}
+        .slide.active .sw>*:nth-child(1){animation-delay:.05s}
+        .slide.active .sw>*:nth-child(2){animation-delay:.15s}
+        .slide.active .sw>*:nth-child(3){animation-delay:.25s}
+        .slide.active .sw>*:nth-child(4){animation-delay:.35s}
+        .slide.active .sw>*:nth-child(5){animation-delay:.45s}
+        .slide.active .sw>*:nth-child(6){animation-delay:.55s}
+        .slide.active .sw>*:nth-child(7){animation-delay:.65s}
+        @keyframes riseIn{from{opacity:0;transform:translateY(40px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+        /* ══════════════ TYPOGRAPHY ══════════════ */
+        .slide h1{font-size:clamp(3rem,5.5vw,4.5rem);font-weight:900;background:linear-gradient(135deg,var(--g) 0%,var(--p) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.1;letter-spacing:-.04em;margin-bottom:1rem}
+        .slide h2{font-size:clamp(2.2rem,4.5vw,3.2rem);font-weight:800;color:var(--t1);line-height:1.1;margin-bottom:1.8rem;position:relative;display:inline-block;letter-spacing:-.03em}
+        .slide h2::after{content:'';position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);width:80px;height:5px;background:linear-gradient(90deg,var(--p),var(--a),var(--s));border-radius:3px;animation:underlinePulse 3s ease-in-out infinite}
+        @keyframes underlinePulse{0%,100%{width:80px;opacity:1}50%{width:120px;opacity:.7}}
+        .slide h3{font-size:clamp(1.3rem,2.5vw,1.7rem);font-weight:700;color:var(--p);margin-bottom:.6rem}
+        .slide p,.slide li{font-size:clamp(1rem,1.5vw,1.12rem);line-height:1.7;color:var(--t2);margin-bottom:.5rem}
+        .mono{font-family:'JetBrains Mono',monospace;font-size:.88rem;background:linear-gradient(135deg,rgba(240,249,255,.9),rgba(224,247,250,.9));color:var(--t1);padding:.8rem 1.5rem;border-radius:14px;border:1.5px solid rgba(0,194,203,.2);display:inline-block;backdrop-filter:blur(12px);box-shadow:inset 0 1px 2px rgba(0,0,0,.03)}
+
+        /* ══════════════ HEADING ICONS ══════════════ */
+        .h-icon{display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;background:linear-gradient(135deg,rgba(0,194,203,.12),rgba(14,165,233,.08));border-radius:14px;margin-right:.7rem;vertical-align:middle;border:1.5px solid rgba(0,194,203,.2);position:relative;transition:all .4s cubic-bezier(.22,1,.36,1)}
+        .h-icon i[data-lucide]{width:26px;height:26px;stroke-width:2}
+        .h-icon::after{content:'';position:absolute;inset:-3px;border-radius:17px;background:linear-gradient(135deg,var(--p),var(--a));z-index:-1;opacity:0;transition:opacity .4s;filter:blur(8px)}
+        .slide.active .h-icon{animation:iconBounce .8s cubic-bezier(.22,1,.36,1) .3s both}
+        @keyframes iconBounce{0%{transform:scale(0) rotate(-15deg)}60%{transform:scale(1.15) rotate(3deg)}100%{transform:scale(1) rotate(0)}}
+
+        /* ══════════════ LOGO ══════════════ */
+        .lbadge{position:absolute;top:1.5rem;left:2rem;width:130px;height:58px;background:url('careerlens_logo.png') no-repeat center/contain;background-color:rgba(255,255,255,.95);border-radius:16px;box-shadow:0 4px 24px var(--sh),0 0 0 1px rgba(0,194,203,.1);z-index:1001;padding:6px;backdrop-filter:blur(16px);transition:all .4s cubic-bezier(.22,1,.36,1)}
+        .lbadge:hover{transform:translateY(-3px) scale(1.04);box-shadow:0 12px 40px rgba(0,194,203,.2)}
+        .logo-lg{width:300px;height:100px;background:url('careerlens_logo.png') no-repeat center/contain;margin-bottom:1rem;animation:logoFloat 5s cubic-bezier(.45,.05,.55,.95) infinite;filter:drop-shadow(0 12px 30px rgba(0,194,203,.2))}
+        @keyframes logoFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-12px) scale(1.02)}}
+
+        /* ══════════════ FEATURE CARDS — PREMIUM ══════════════ */
+        .fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.8rem;max-width:1300px;width:100%;margin:1.5rem auto}
+        .fc{background:rgba(255,255,255,.85);backdrop-filter:blur(20px);border:1.5px solid rgba(0,194,203,.1);border-radius:24px;padding:2rem;text-align:left;transition:all .45s cubic-bezier(.22,1,.36,1);box-shadow:0 4px 20px rgba(0,0,0,.03);position:relative;overflow:hidden;cursor:default}
+        .fc::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--p),var(--a),var(--s));background-size:200% 100%;transform:scaleX(0);transform-origin:left;transition:transform .5s cubic-bezier(.22,1,.36,1)}
+        .fc::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,rgba(0,194,203,.06) 0%,transparent 60%);opacity:0;transition:opacity .5s}
+        .fc:hover{transform:translateY(-10px) scale(1.01);box-shadow:0 24px 60px rgba(0,194,203,.14),0 0 0 1px rgba(0,194,203,.15);border-color:rgba(0,194,203,.25)}
+        .fc:hover::before{transform:scaleX(1);animation:gradientSlide 2s linear infinite}
+        .fc:hover::after{opacity:1}
+        .fc:hover .icon-circle{transform:scale(1.1);box-shadow:0 8px 24px rgba(0,194,203,.3)}
+        .fc:hover .icon-circle i[data-lucide]{animation:iconWiggle .5s ease}
+        @keyframes gradientSlide{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+        @keyframes iconWiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
+
+        /* ── ICON CIRCLES — Big, Bold, Animated ── */
+        .icon-circle{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;margin-bottom:1rem;transition:all .45s cubic-bezier(.22,1,.36,1);position:relative}
+        .icon-circle i[data-lucide]{width:30px;height:30px;stroke-width:2;color:#fff !important;transition:all .3s}
+        .icon-circle.ic-primary{background:linear-gradient(135deg,var(--p),#00a8b0);box-shadow:0 6px 20px rgba(0,194,203,.3)}
+        .icon-circle.ic-green{background:linear-gradient(135deg,var(--ok),#16a34a);box-shadow:0 6px 20px rgba(34,197,94,.3)}
+        .icon-circle.ic-amber{background:linear-gradient(135deg,var(--warn),#d97706);box-shadow:0 6px 20px rgba(245,158,11,.3)}
+        .icon-circle.ic-red{background:linear-gradient(135deg,var(--err),#dc2626);box-shadow:0 6px 20px rgba(239,68,68,.3)}
+        .icon-circle.ic-purple{background:linear-gradient(135deg,var(--a),#6d28d9);box-shadow:0 6px 20px rgba(124,58,237,.3)}
+        .icon-circle.ic-blue{background:linear-gradient(135deg,var(--s),#0284c7);box-shadow:0 6px 20px rgba(14,165,233,.3)}
+        .icon-circle.ic-dark{background:linear-gradient(135deg,#0d9488,#0f766e);box-shadow:0 6px 20px rgba(13,148,136,.3)}
+
+        .fc h3{color:var(--t1);font-size:1.15rem;font-weight:700;margin-bottom:.4rem;letter-spacing:-.01em}
+        .fc p{font-size:.93rem;line-height:1.6;color:var(--t2)}
+
+        /* ── Stagger card entrance ── */
+        .slide.active .fg>.fc{animation:cardFly .7s cubic-bezier(.22,1,.36,1) both}
+        .slide.active .fg>.fc:nth-child(1){animation-delay:.12s}
+        .slide.active .fg>.fc:nth-child(2){animation-delay:.2s}
+        .slide.active .fg>.fc:nth-child(3){animation-delay:.28s}
+        .slide.active .fg>.fc:nth-child(4){animation-delay:.36s}
+        .slide.active .fg>.fc:nth-child(5){animation-delay:.44s}
+        .slide.active .fg>.fc:nth-child(6){animation-delay:.52s}
+        @keyframes cardFly{from{opacity:0;transform:translateY(50px) scale(.92) rotateX(8deg)}to{opacity:1;transform:translateY(0) scale(1) rotateX(0)}}
+
+        /* ══════════════ STATS — ANIMATED RINGS ══════════════ */
+        .sc{display:flex;justify-content:center;flex-wrap:wrap;gap:1.8rem;margin:1.5rem 0;width:100%}
+        .si{text-align:center;background:rgba(255,255,255,.9);backdrop-filter:blur(16px);border-radius:24px;padding:2rem 2.2rem;min-width:200px;flex:1;border:1.5px solid rgba(0,194,203,.1);box-shadow:0 8px 30px rgba(0,0,0,.04);transition:all .45s cubic-bezier(.22,1,.36,1);position:relative;overflow:hidden}
+        .si::before{content:'';position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--p),var(--a),var(--s));background-size:200% 100%;transform:scaleX(0);transition:transform .5s cubic-bezier(.22,1,.36,1)}
+        .si::after{content:'';position:absolute;top:-30px;right:-30px;width:100px;height:100px;border-radius:50%;border:3px solid rgba(0,194,203,.08);pointer-events:none;transition:all .5s}
+        .si:hover{transform:translateY(-10px);border-color:rgba(0,194,203,.25);box-shadow:0 20px 50px rgba(0,194,203,.12)}
+        .si:hover::before{transform:scaleX(1);animation:gradientSlide 2s linear infinite}
+        .si:hover::after{transform:scale(1.5);border-color:rgba(0,194,203,.15)}
+        .sn{font-size:clamp(2rem,4vw,2.8rem);font-weight:900;background:linear-gradient(135deg,var(--p),var(--a));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.1;white-space:nowrap}
+        .si p{color:var(--t2);font-weight:600;margin-top:.5rem;text-transform:uppercase;letter-spacing:.05em;font-size:.82rem}
+        .slide.active .sc>.si{animation:statBurst .7s cubic-bezier(.22,1,.36,1) both}
+        .slide.active .sc>.si:nth-child(1){animation-delay:.1s}
+        .slide.active .sc>.si:nth-child(2){animation-delay:.2s}
+        .slide.active .sc>.si:nth-child(3){animation-delay:.3s}
+        .slide.active .sc>.si:nth-child(4){animation-delay:.4s}
+        @keyframes statBurst{from{opacity:0;transform:scale(.7) translateY(30px)}50%{transform:scale(1.05) translateY(-5px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+        /* ══════════════ NAVIGATION ══════════════ */
+        .nav{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);display:flex;gap:1rem;z-index:1000;background:rgba(255,255,255,.9);backdrop-filter:blur(24px);padding:1rem 1.5rem;border-radius:60px;border:1.5px solid rgba(0,194,203,.12);box-shadow:0 12px 50px rgba(0,0,0,.08)}
+        .nb{width:54px;height:54px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--p),var(--s));color:#fff;font-size:1.5rem;cursor:pointer;transition:all .35s cubic-bezier(.22,1,.36,1);box-shadow:0 6px 20px rgba(0,194,203,.25);display:flex;align-items:center;justify-content:center;font-weight:700;position:relative;overflow:hidden}
+        .nb::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.25),transparent);border-radius:50%}
+        .nb::after{content:'';position:absolute;inset:-2px;border-radius:50%;background:linear-gradient(135deg,var(--p),var(--a));z-index:-1;opacity:0;transition:opacity .3s;filter:blur(10px)}.nb:hover::after{opacity:.6}
+        .nb:hover{transform:scale(1.15);box-shadow:0 10px 30px rgba(0,194,203,.35)}.nb:active{transform:scale(.9)}
+
+        /* ══════════════ COUNTER & PROGRESS ══════════════ */
+        .cnt{position:fixed;top:1.5rem;right:2rem;background:rgba(255,255,255,.9);backdrop-filter:blur(20px);padding:.7rem 1.4rem;border-radius:50px;font-weight:700;border:1.5px solid rgba(0,194,203,.1);color:var(--t1);z-index:1000;font-size:1rem;box-shadow:0 4px 20px rgba(0,0,0,.04);font-family:'JetBrains Mono',monospace;letter-spacing:.02em}
+        .pb{position:fixed;top:0;left:0;height:5px;background:linear-gradient(90deg,var(--p),var(--a),var(--s),var(--p));background-size:300% 100%;animation:progressGlow 4s linear infinite;z-index:1002;transition:width .6s cubic-bezier(.22,1,.36,1);box-shadow:0 0 20px rgba(0,194,203,.5),0 0 40px rgba(124,58,237,.2)}
+        @keyframes progressGlow{0%{background-position:0% 50%}100%{background-position:300% 50%}}
+
+        /* ══════════════ HELPERS ══════════════ */
+        .hl{background:linear-gradient(135deg,var(--p),var(--s));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:800}
+        .ts{display:flex;flex-wrap:wrap;justify-content:center;gap:.7rem;margin:1.2rem 0}
+        .ti{background:rgba(255,255,255,.8);backdrop-filter:blur(10px);border-radius:24px;padding:.5rem 1rem;font-weight:600;border:1.5px solid rgba(0,194,203,.12);color:var(--t1);font-size:.88rem;transition:all .4s cubic-bezier(.22,1,.36,1);cursor:default}
+        .ti:hover{border-color:var(--p);background:linear-gradient(135deg,var(--p),var(--s));color:#fff;transform:translateY(-3px) scale(1.03);box-shadow:0 8px 24px rgba(0,194,203,.25)}
+
+        /* ══════════════ PREMIUM CARD ══════════════ */
+        .pc-card{background:rgba(255,255,255,.8);backdrop-filter:blur(20px);border-radius:28px;padding:2.2rem;margin:1.5rem 0;border:1.5px solid rgba(0,194,203,.12);box-shadow:0 12px 40px rgba(0,0,0,.04);position:relative;overflow:hidden;width:100%;max-width:1050px;transition:all .4s}
+        .pc-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--p),var(--a),var(--s));background-size:200% 100%;animation:gradientSlide 3s linear infinite}
+        .pc-card:hover{box-shadow:0 20px 60px rgba(0,194,203,.1);border-color:rgba(0,194,203,.2)}
+
+        /* ══════════════ SPLIT CONTENT ══════════════ */
+        .sp{display:grid;grid-template-columns:1fr 1fr;gap:2.5rem;max-width:1300px;width:100%;margin:1.5rem auto;text-align:left}
+        .sp ul{padding:0;list-style:none}
+        .sp li{position:relative;padding-left:1.8rem;margin-bottom:.8rem;font-size:1rem;line-height:1.6;transition:all .35s cubic-bezier(.22,1,.36,1);border-radius:8px;padding-top:.2rem;padding-bottom:.2rem}
+        .sp li::before{content:'';width:10px;height:10px;background:linear-gradient(135deg,var(--p),var(--a));border-radius:4px;position:absolute;left:0;top:10px;transition:all .3s}
+        .sp li:hover{transform:translateX(6px);background:rgba(0,194,203,.04);padding-left:2rem}
+        .sp li:hover::before{border-radius:50%;transform:scale(1.3)}
+
+        /* ══════════════ TIER BADGES ══════════════ */
+        .tb{display:inline-block;border-radius:12px;padding:.35rem .9rem;font-size:.78rem;font-weight:700;letter-spacing:.05em;margin:.15rem;transition:all .35s;cursor:default}
+        .tb-c{background:linear-gradient(135deg,rgba(0,194,203,.1),rgba(0,194,203,.05));color:var(--p);border:1.5px solid rgba(0,194,203,.25)}
+        .tb-s{background:linear-gradient(135deg,rgba(34,197,94,.08),rgba(34,197,94,.03));color:var(--ok);border:1.5px solid rgba(34,197,94,.25)}
+        .tb-b{background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(245,158,11,.03));color:var(--warn);border:1.5px solid rgba(245,158,11,.25)}
+        .tb:hover{transform:translateY(-3px) scale(1.05);box-shadow:0 6px 16px rgba(0,0,0,.08)}
+
+        /* ══════════════ CTA SECTION ══════════════ */
+        .cta{background:linear-gradient(135deg,rgba(240,249,255,.9),rgba(224,247,250,.7));backdrop-filter:blur(16px);border-radius:28px;padding:2.2rem;border:1.5px solid rgba(0,194,203,.18);box-shadow:0 12px 40px rgba(0,194,203,.06);margin-top:1.5rem;width:100%;max-width:1050px;position:relative;overflow:hidden;transition:all .4s}
+        .cta::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--p),var(--s))}
+        .cta:hover{box-shadow:0 20px 60px rgba(0,194,203,.1)}
+
+        /* ══════════════ RESPONSIVE ══════════════ */
+        @media(max-width:900px){.sp{grid-template-columns:1fr}.fg{grid-template-columns:1fr 1fr}.icon-circle{width:52px;height:52px;border-radius:14px}.icon-circle i[data-lucide]{width:24px;height:24px}}
+        @media(max-width:600px){.fg{grid-template-columns:1fr}.sc{flex-direction:column}.nb{width:44px;height:44px;font-size:1.2rem}.cnt{font-size:.8rem;padding:.4rem .8rem}.lbadge{width:90px;height:42px;top:.8rem;left:.8rem}.slide{padding:1.5rem 1.5rem 5rem}.icon-circle{width:48px;height:48px}.h-icon{width:38px;height:38px}}
+    </style>
+</head>
+<body>
+<div class="pc">
+<div class="lbadge"></div>
+<div class="cnt"><span id="cs">1</span> / <span id="ts">13</span></div>
+<div class="pb" id="pb"></div>
+
+<!-- ══ SLIDE 1 — COVER (Image) ══ -->
+<div class="slide active" style="padding:0;background:#fff">
+<img src="image.png" alt="CareerLens Cover" style="width:100%;height:100vh;object-fit:contain;background:#fff;">
+</div>
+
+<!-- ══ SLIDE 2 — PROJECT OVERVIEW ══ -->
+<div class="slide">
+<div class="sw" style="justify-content:center;min-height:100vh;padding-top:2rem">
+    <div class="logo-lg"></div>
+    <h2 style="margin-bottom:.4rem">Project Overview</h2>
+    <p style="font-size:clamp(1.15rem,2.2vw,1.5rem);max-width:800px;margin-bottom:2rem;color:var(--t2);font-weight:400">
+        CareerLens is a <strong class="hl">full-stack AI platform</strong> that analyzes resumes against the EU's ESCO taxonomy to deliver <strong>transparent skill-gap scores</strong> and <strong>personalised learning roadmaps</strong> — for students and recruiters alike.
+    </p>
+    <div class="sc" style="max-width:1000px">
+        <div class="si"><div class="sn">3,007</div><p>ESCO Occupations</p></div>
+        <div class="si"><div class="sn">13,896</div><p>Skills Analysed</p></div>
+        <div class="si"><div class="sn">123K+</div><p>Skill Relations</p></div>
+        <div class="si"><div class="sn">25/25</div><p>Tests Passing</p></div>
+    </div>
+    <div class="fg" style="grid-template-columns:repeat(4,1fr);margin-top:2rem">
+        <div class="fc" style="text-align:center;padding:1.5rem"><div class="icon-circle ic-primary" style="margin:0 auto 1rem"><i data-lucide="file-text"></i></div><h3>Resume → Score</h3><p>Upload PDF/DOCX, get a calibrated 3-tier skill coverage score instantly</p></div>
+        <div class="fc" style="text-align:center;padding:1.5rem"><div class="icon-circle ic-blue" style="margin:0 auto 1rem"><i data-lucide="map"></i></div><h3>AI Roadmaps</h3><p>LLM-generated learning paths with curated resources per missing skill</p></div>
+        <div class="fc" style="text-align:center;padding:1.5rem"><div class="icon-circle ic-purple" style="margin:0 auto 1rem"><i data-lucide="users"></i></div><h3>Recruiter Rank</h3><p>Batch-rank up to 10 candidates with decision scores & risk levels</p></div>
+        <div class="fc" style="text-align:center;padding:1.5rem"><div class="icon-circle ic-green" style="margin:0 auto 1rem"><i data-lucide="bot"></i></div><h3>AI Assistant</h3><p>Context-aware career coach, roadmap guide & recruiter helper bot</p></div>
+    </div>
+    <div class="ts" style="margin-top:1.5rem">
+        <span class="ti">FastAPI</span><span class="ti">React 19</span><span class="ti">ESCO + O*NET</span><span class="ti">scikit-learn</span><span class="ti">Qwen LLM</span><span class="ti">Docker</span><span class="ti">Vercel + Render</span>
+    </div>
+</div>
+</div>
+
+<!-- ══ SLIDE 3 — WHAT PROBLEM ══ -->
+<div class="slide">
+<div class="sw">
+    <h2><span class="h-icon"><i data-lucide="alert-triangle" style="color:var(--err)"></i></span>What Problem Does CareerLens Solve?</h2>
+    <p style="font-size:clamp(1.1rem,2vw,1.4rem);max-width:900px;margin-bottom:2rem">
+        Millions of job seekers get rejected by ATS systems without ever knowing <em>which specific skills</em> they're missing — and have no structured way to close those gaps.
+    </p>
+    <div class="fg" style="grid-template-columns:repeat(2,1fr)">
+        <div class="fc"><div class="icon-circle ic-red"><i data-lucide="eye-off"></i></div><h3>No Skill Visibility</h3><p>Candidates don't know which of the 50–150 required skills for their target role are missing from their resume</p></div>
+        <div class="fc"><div class="icon-circle ic-dark"><i data-lucide="lock"></i></div><h3>ATS Black Box</h3><p>ATS systems silently reject resumes via keyword matching — zero feedback, zero transparency</p></div>
+        <div class="fc"><div class="icon-circle ic-amber"><i data-lucide="compass"></i></div><h3>No Actionable Roadmap</h3><p>Even when gaps are vaguely identified, there's no personalised, phase-by-phase learning path with real resources</p></div>
+        <div class="fc"><div class="icon-circle ic-purple"><i data-lucide="credit-card"></i></div><h3>Expensive or Generic Tools</h3><p>Jobscan charges $50+/month. Free alternatives lack industry-standard taxonomy & explainability</p></div>
+    </div>
+    <div class="cta" style="border-color:var(--err)">
+        <h3 style="color:var(--err)"><span class="h-icon"><i data-lucide="key" style="color:var(--err)"></i></span>The Core Insight</h3>
+        <p style="font-size:1.15rem;color:var(--t1)">A well-qualified resume only mentions <strong class="hl">25–35%</strong> of ESCO skills for a role. Without calibration, every resume looks under-qualified. CareerLens solves this with <strong>exponential calibration scoring</strong>.</p>
+    </div>
+</div>
+</div>
+
+<!-- ══ SLIDE 3 — SOLUTION OVERVIEW ══ -->
+<div class="slide">
+<div class="sw">
+    <h2><span class="h-icon"><i data-lucide="rocket"></i></span>The CareerLens Solution</h2>
+    <p style="font-size:clamp(1.1rem,2vw,1.35rem);max-width:900px;margin-bottom:2rem">
+        Upload resume → Select target role → Get ESCO-aligned 3-tier analysis + personalised AI roadmap — all in seconds, completely free.
+    </p>
+    <div class="fg" style="grid-template-columns:repeat(4,1fr)">
+        <div class="fc" style="text-align:center"><div class="icon-circle ic-primary" style="margin:0 auto 1rem"><i data-lucide="upload"></i></div><h3>Resume Upload</h3><p>PDF, DOCX, TXT — client-side parsing via pdf.js & mammoth.js. No server file storage.</p></div>
+        <div class="fc" style="text-align:center"><div class="icon-circle ic-blue" style="margin:0 auto 1rem"><i data-lucide="search"></i></div><h3>ESCO Role Resolver</h3><p>Token-overlap F1 scoring resolves any role input to the best ESCO occupation from 3,007</p></div>
+        <div class="fc" style="text-align:center"><div class="icon-circle ic-purple" style="margin:0 auto 1rem"><i data-lucide="scale"></i></div><h3>3-Tier Scoring</h3><p>Core / Secondary / Bonus tiers with confidence engine & exponential calibration</p></div>
+        <div class="fc" style="text-align:center"><div class="icon-circle ic-green" style="margin:0 auto 1rem"><i data-lucide="route"></i></div><h3>AI Roadmap</h3><p>Personalised learning path enhanced by Qwen/LLaMA LLM via HuggingFace Router</p></div>
+    </div>
+    <div class="pc-card">
+        <h3><span class="h-icon"><i data-lucide="workflow"></i></span>Complete Analysis Pipeline</h3>
+        <div class="mono" style="white-space:normal;line-height:1.9;font-size:.88rem">
+            Resume Upload → Client-Side Parse → ESCO Autocomplete → POST /analyze/full → Occupation Resolver → Skill Classifier (3-Tier) → Confidence Engine → Calibrated Scoring → LLM Roadmap Enhancer → Quality Gate → Results Dashboard
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ══ SLIDE 4 — SKILL GAP: WHERE TO START ══ -->
+<div class="slide">
+<div class="sw">
+    <h2><span class="h-icon"><i data-lucide="compass"></i></span>Skill Gap — Where to Start?</h2>
+    <p style="font-size:clamp(1.1rem,2vw,1.35rem);max-width:900px;margin-bottom:2rem">
+        CareerLens doesn't just score you — it tells you <em>exactly</em> which skills to learn first, in what order, with real resources.
+    </p>
+    <div class="fg" style="grid-template-columns:repeat(3,1fr)">
+        <div class="fc" style="text-align:center"><div class="icon-circle ic-primary" style="margin:0 auto 1rem"><i data-lucide="shield-check"></i></div><h3>Core Skills (50%)</h3><span class="tb tb-c">ESSENTIAL</span><p style="margin-top:.6rem">ESCO "essential" relations — non-negotiable for the role. Miss penalty amplifies overall score impact. Confidence threshold: ≥ 0.24</p></div>
+        <div class="fc" style="text-align:center"><div class="icon-circle ic-green" style="margin:0 auto 1rem"><i data-lucide="book-open"></i></div><h3>Secondary Skills (30%)</h3><span class="tb tb-s">KNOWLEDGE</span><p style="margin-top:.6rem">Optional + "knowledge" type — domain theory and concepts. Important for depth. Confidence threshold: ≥ 0.22</p></div>
+        <div class="fc" style="text-align:center"><div class="icon-circle ic-amber" style="margin:0 auto 1rem"><i data-lucide="sparkles"></i></div><h3>Bonus Skills (20%)</h3><span class="tb tb-b">NICE-TO-HAVE</span><p style="margin-top:.6rem">Optional + "skill/competence" — extra tools, frameworks. No miss penalty but boost score. Threshold: ≥ 0.20</p></div>
+    </div>
+    <div class="pc-card">
+        <h3><span class="h-icon"><i data-lucide="trending-up"></i></span>Improvement Priority Engine</h3>
+        <div class="sp" style="margin:1rem 0;gap:1.5rem">
+            <div>
+                <p style="font-weight:700;color:var(--t1);margin-bottom:.8rem">How it works:</p>
+                <ul>
+                    <li><strong>Missing Core → High Priority</strong> — Learn these first, they're job requirements</li>
+                    <li><strong>Missing Secondary → Medium Priority</strong> — Strengthen theoretical foundation</li>
+                    <li><strong>Missing Bonus → Low Priority</strong> — Extras that give competitive edge</li>
+                    <li><strong>AI Roadmap phases</strong> auto-order skills by priority tier</li>
+                </ul>
+            </div>
+            <div>
+                <p style="font-weight:700;color:var(--t1);margin-bottom:.8rem">Roadmap Output:</p>
+                <ul>
+                    <li><strong>Phase-by-phase plan</strong> — Beginner / Intermediate / Advanced tracks</li>
+                    <li><strong>Step-by-step actions</strong> — "Step 1: Complete tutorial, Step 2: Build project..."</li>
+                    <li><strong>Curated resources</strong> — Coursera, Kaggle, MDN, official docs per skill</li>
+                    <li><strong>Quality gate</strong> enforces relevance & prevents generic output</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ══ SLIDE 5 — UNIQUE SELLING POINTS ══ -->
+<div class="slide">
+<div class="sw">
+    <h2><span class="h-icon"><i data-lucide="gem"></i></span>What Makes CareerLens Unique?</h2>
+    <p style="font-size:clamp(1.1rem,2vw,1.35rem);max-width:900px;margin-bottom:2rem">
+        Not another resume scanner — a complete, transparent, ESCO-powered career intelligence platform.
+    </p>
+    <div class="fg" style="grid-template-columns:repeat(3,1fr)">
+        <div class="fc"><div class="icon-circle ic-primary"><i data-lucide="landmark"></i></div><h3>ESCO Taxonomy</h3><p>Built on the EU's official ESCO dataset — 3,007 occupations, 13,896 skills, 123,788 relations. Not keyword guessing.</p></div>
+        <div class="fc"><div class="icon-circle ic-blue"><i data-lucide="bar-chart-3"></i></div><h3>Explainable Scoring</h3><p>See exactly why you got your score — confidence values per skill, frequency & context signals, tier breakdown. Full transparency.</p></div>
+        <div class="fc"><div class="icon-circle ic-purple"><i data-lucide="flask-conical"></i></div><h3>Exponential Calibration</h3><p>100×(1−e^(−4×raw)) — accounts for the fact that keyword matching captures only 25–35% of ESCO skills. 30% raw ≈ 70% calibrated.</p></div>
+        <div class="fc"><div class="icon-circle ic-green"><i data-lucide="users-2"></i></div><h3>Dual User System</h3><p>Students get gap analysis + roadmaps. Recruiters get batch ranking, decision scores, risk levels & shortlist recommendations.</p></div>
+        <div class="fc"><div class="icon-circle ic-amber"><i data-lucide="brain"></i></div><h3>Hybrid ESCO + O*NET</h3><p>Primary ESCO scoring fused with O*NET alignment (82/18 weighted blend) for robust cross-taxonomy validation.</p></div>
+        <div class="fc"><div class="icon-circle ic-primary"><i data-lucide="badge-check"></i></div><h3>Completely Free</h3><p>No paywall, no trial limits. Full analysis + roadmap + AI bot — free for students. Open-source ready architecture.</p></div>
+    </div>
+</div>
+</div>
+
+<!-- ══ SLIDE 6 — RECRUITER SIDE ══ -->
+<div class="slide">
+<div class="sw">
+    <h2><span class="h-icon"><i data-lucide="briefcase"></i></span>Recruiter Dashboard & Batch Analysis</h2>
+    <p style="font-size:clamp(1.1rem,2vw,1.35rem);max-width:900px;margin-bottom:2rem">
+        CareerLens isn't just for students — recruiters can rank, compare, and shortlist candidates with data-driven precision.
+    </p>
+    <div class="fg" style="grid-template-columns:repeat(3,1fr)">
+        <div class="fc"><div class="icon-circle ic-primary"><i data-lucide="list-ordered"></i></div><h3>Batch Ranking</h3><p>Upload up to 10 resumes against one role. Auto-ranked by decision score — no manual screening needed.</p></div>
+        <div class="fc"><div class="icon-circle ic-blue"><i data-lucide="calculator"></i></div><h3>Decision Score Engine</h3><p>Weighted formula: 62% Core + 23% Overall + 10% Secondary + 5% Bonus — with breadth & core-gap penalties.</p></div>
+        <div class="fc"><div class="icon-circle ic-red"><i data-lucide="shield-alert"></i></div><h3>Risk Assessment</h3><p>Low / Medium / High risk levels based on core coverage & gap ratio. Color-coded for instant readability.</p></div>
+        <div class="fc"><div class="icon-circle ic-green"><i data-lucide="clipboard-check"></i></div><h3>Shortlist Labels</h3><p>Auto-classified: "High Priority Shortlist", "Interview Recommended", "Conditional Review", "Future Pipeline"</p></div>
+        <div class="fc"><div class="icon-circle ic-purple"><i data-lucide="tags"></i></div><h3>Skill Classification</h3><p>Core / Language / Other breakdowns per candidate. Matched vs missing — structured for quick comparison.</p></div>
+        <div class="fc"><div class="icon-circle ic-amber"><i data-lucide="message-square"></i></div><h3>Recruiter AI Bot</h3><p>Intent-detecting bot in "Recruiter Helper" mode — generates interview questions, risk summaries, shortlist recommendations.</p></div>
+    </div>
+</div>
+</div>
+
+<!-- ══ SLIDE 7 — TECH ARCHITECTURE ══ -->
+<div class="slide">
+<div class="sw">
+    <h2><span class="h-icon"><i data-lucide="settings"></i></span>Technical Architecture</h2>
+    <div class="sp">
+        <div>
+            <h3 style="color:#8e24aa;margin-bottom:1.2rem">Frontend — React 19 + Vite 8</h3>
+            <ul>
+                <li><strong>React 19 + Vite + Tailwind CSS 4</strong> — Component architecture with utility-first styling</li>
+                <li><strong>Framer Motion</strong> — Score rings, skill tags, roadmap timeline, floating nodes</li>
+                <li><strong>Client-Side Resume Parsing</strong> — PDF (pdf.js) + DOCX (mammoth.js) from CDN</li>
+                <li><strong>Role-Based Routing</strong> — Student & Recruiter protected routes with JWT AuthContext</li>
+                <li><strong>6 Auth Screens</strong> — Register, OTP, Login, Forgot/Reset Password, Role Selection</li>
+                <li><strong>Live Analysis Panel</strong> — Animated hero with typing simulation</li>
+            </ul>
+        </div>
+        <div>
+            <h3 style="color:var(--ok);margin-bottom:1.2rem">Backend — FastAPI + Python 3.13</h3>
+            <ul>
+                <li><strong>FastAPI + SQLAlchemy ORM</strong> — Pydantic v2 validation, auto Swagger docs</li>
+                <li><strong>ESCO Database</strong> — 3,007 occupations + 13,896 skills + 123,788 relations</li>
+                <li><strong>Hybrid ESCO + O*NET</strong> — 82/18 weighted fusion with alias bridge matching</li>
+                <li><strong>JWT Auth + OTP Email</strong> — SMTP (Gmail) + Resend API dual provider</li>
+                <li><strong>12 API Routers</strong> — analyze, auth, bot, contact, ml_fit, roadmap, resume, etc.</li>
+                <li><strong>15 Service Modules</strong> — scoring, confidence, calibration, ML model, LLM enhancer</li>
+            </ul>
+        </div>
+    </div>
+    <div class="ts">
+        <span class="ti">Python 3.13</span><span class="ti">FastAPI</span><span class="ti">React 19</span><span class="ti">Vite 8</span><span class="ti">Tailwind 4</span><span class="ti">Framer Motion</span><span class="ti">SQLAlchemy</span><span class="ti">scikit-learn</span><span class="ti">HuggingFace</span><span class="ti">Docker</span><span class="ti">Render</span><span class="ti">Vercel</span>
+    </div>
+</div>
+</div>
+
+<!-- ══ SLIDE 8 — PLATFORM FEATURES ══ -->
+<div class="slide">
+<div class="sw">
+    <h2><span class="h-icon"><i data-lucide="layers"></i></span>Platform Features — Built From Scratch</h2>
+    <div class="fg" style="grid-template-columns:repeat(3,1fr)">
+        <div class="fc"><div class="icon-circle ic-primary"><i data-lucide="shield"></i></div><h3>Full Auth System</h3><p>OTP email verification, JWT tokens, password reset flow, 2FA login, role-based routing — Student & Recruiter</p></div>
+        <div class="fc"><div class="icon-circle ic-purple"><i data-lucide="bot"></i></div><h3>Hybrid AI Bot</h3><p>3-mode intent detection: Career Coach, Roadmap Assistant, Recruiter Helper. Qwen 2.5 via HuggingFace Router API</p></div>
+        <div class="fc"><div class="icon-circle ic-blue"><i data-lucide="cpu"></i></div><h3>ML Fit Predictor</h3><p>Logistic Regression / Random Forest (scikit-learn). Predicts recruiter fit probability — AUC, F1, feature importance</p></div>
+        <div class="fc"><div class="icon-circle ic-amber"><i data-lucide="mail"></i></div><h3>Branded Email System</h3><p>Dual provider: SMTP (Gmail) + Resend API. OTP, newsletter welcome, contact form — all with CareerLens branded HTML</p></div>
+        <div class="fc"><div class="icon-circle ic-green"><i data-lucide="map-pin"></i></div><h3>LLM-Enhanced Roadmaps</h3><p>Phase descriptions, step-by-step actions, learning objectives & curated resources. Quality gate enforces relevance.</p></div>
+        <div class="fc"><div class="icon-circle ic-dark"><i data-lucide="play"></i></div><h3>Demo Mode</h3><p>No-login public demo at /demo with hardcoded data — lets anyone try the full analysis experience instantly</p></div>
+    </div>
+</div>
+</div>
+
+<!-- ══ SLIDE 9 — DATASET & TESTING ══ -->
+<div class="slide">
+<div class="sw">
+    <h2><span class="h-icon"><i data-lucide="database"></i></span>Dataset & Validation</h2>
+    <div class="sc">
+        <div class="si"><div class="sn">3,007</div><p>ESCO Occupations</p></div>
+        <div class="si"><div class="sn">13,896</div><p>ESCO Skills</p></div>
+        <div class="si"><div class="sn">123,788</div><p>Skill Relations</p></div>
+        <div class="si"><div class="sn">25/25</div><p>Tests Passing</p></div>
+    </div>
+    <div class="sp">
+        <div>
+            <h3 style="color:#8e24aa;margin-bottom:1rem"><span class="h-icon"><i data-lucide="folder-open" style="color:#8e24aa"></i></span>Datasets Used</h3>
+            <ul>
+                <li><strong>ESCO CSV (Primary)</strong> — occupations.csv, skills.csv, occupation_skill_relations.csv — 140,691 records</li>
+                <li><strong>O*NET Database</strong> — 39 Excel files for hybrid alignment signal</li>
+                <li><strong>Resume.csv + data.csv</strong> — Kaggle samples for parser testing</li>
+                <li><strong>Stack Overflow Dev Survey</strong> — Reserved for future cross-referencing</li>
+            </ul>
+        </div>
+        <div>
+            <h3 style="color:var(--ok);margin-bottom:1rem"><span class="h-icon"><i data-lucide="check-circle" style="color:var(--ok)"></i></span>Test Suite</h3>
+            <ul>
+                <li><strong>16 Keyword Matching Tests</strong> — True positives (debug→debugging) & true negatives (R, C#, C++)</li>
+                <li><strong>6 API Integration Tests</strong> — End-to-end HTTP: health, search, analyze, 404, Swagger</li>
+                <li><strong>Pipeline Smoke Test</strong> — Direct advanced_analyze() validation</li>
+                <li><strong>Demo Data Generator</strong> — Real backend output for frontend demo mode</li>
+            </ul>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ══ SLIDE 10 — DEPLOYMENT ══ -->
+<div class="slide">
+<div class="sw">
+    <h2><span class="h-icon"><i data-lucide="globe"></i></span>Live Deployment & Infrastructure</h2>
+    <div class="fg" style="grid-template-columns:repeat(3,1fr)">
+        <div class="fc" style="text-align:center"><div class="icon-circle ic-dark" style="margin:0 auto 1rem"><i data-lucide="triangle"></i></div><h3>Frontend — Vercel</h3><p>React 19 SPA deployed on Vercel CDN. Auto-deploy from GitHub. Custom domain: careerlens.in</p></div>
+        <div class="fc" style="text-align:center"><div class="icon-circle ic-blue" style="margin:0 auto 1rem"><i data-lucide="server"></i></div><h3>Backend — Render</h3><p>FastAPI on Render Docker container. Auto-deploy, health checks. API: careerlens-api-imy1.onrender.com</p></div>
+        <div class="fc" style="text-align:center"><div class="icon-circle ic-purple" style="margin:0 auto 1rem"><i data-lucide="hard-drive"></i></div><h3>Database — Turso</h3><p>LibSQL (SQLite-compatible) cloud database. Migrated from MySQL for edge performance. REST API adapter.</p></div>
+    </div>
+    <div class="pc-card">
+        <h3><span class="h-icon"><i data-lucide="wrench"></i></span>DevOps & Infrastructure</h3>
+        <div class="sp" style="margin:1rem 0">
+            <div>
+                <ul>
+                    <li><strong>Docker</strong> — Containerised backend with multi-stage builds</li>
+                    <li><strong>CORS Configuration</strong> — Whitelisted Vercel domains + localhost</li>
+                    <li><strong>Schema Migrations</strong> — Auto-run on startup via lifespan event</li>
+                </ul>
+            </div>
+            <div>
+                <ul>
+                    <li><strong>Environment Config</strong> — .env driven: HF_TOKEN, SMTP, RESEND_API_KEY, DB_URL</li>
+                    <li><strong>Static Assets</strong> — Logo served at /static/careerlens-logo.png for emails</li>
+                    <li><strong>Health Check</strong> — GET / returns version, status, endpoint map</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ══ SLIDE 11 — FUTURE ROADMAP ══ -->
+<div class="slide">
+<div class="sw">
+    <h2><span class="h-icon"><i data-lucide="lightbulb"></i></span>Future Innovation Pipeline</h2>
+    <div class="sp">
+        <div>
+            <h3 style="color:#ff5722;margin-bottom:1rem"><span class="h-icon"><i data-lucide="rocket" style="color:#ff5722"></i></span>Phase 3: AI/ML Upgrades</h3>
+            <ul>
+                <li><strong>Fine-tuned Career LLM</strong> — Domain-specific model on ESCO labels & JDs</li>
+                <li><strong>Stronger ML Fit Model</strong> — More training data + recruiter outcome feedback</li>
+                <li><strong>Multilingual Support</strong> — ESCO labels across EU languages</li>
+                <li><strong>Observability Stack</strong> — Centralised logs, metrics & alerting</li>
+                <li><strong>CI Benchmarking</strong> — Automated accuracy tracking in pipelines</li>
+            </ul>
+        </div>
+        <div>
+            <h3 style="color:#8e24aa;margin-bottom:1rem"><span class="h-icon"><i data-lucide="star" style="color:#8e24aa"></i></span>Phase 4: Platform Growth</h3>
+            <ul>
+                <li><strong>Career Progress Tracking</strong> — Month-over-month skill growth dashboards</li>
+                <li><strong>JD Skill Extraction</strong> — Recruiters paste JD → auto ESCO mapping</li>
+                <li><strong>LinkedIn Import</strong> — One-click profile import & gap calc</li>
+                <li><strong>Mobile App</strong> — React Native for resume upload on-the-go</li>
+                <li><strong>Enterprise B2B API</strong> — University & placement cell integrations</li>
+            </ul>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ══ SLIDE 12 — THANK YOU ══ -->
+<div class="slide" style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f7fa 40%,#f8fafc 100%)">
+<div class="sw" style="justify-content:center;height:100vh">
+    <div class="logo-lg" style="margin-bottom:1rem"></div>
+    <h1 style="font-size:clamp(3.5rem,7vw,6rem);color:var(--g);font-weight:300;letter-spacing:-.02em;margin-bottom:1rem">Thank You</h1>
+    <div style="width:200px;height:4px;background:linear-gradient(90deg,var(--p),var(--s));margin:0 auto 2rem;border-radius:2px"></div>
+    <div class="sc" style="max-width:800px">
+        <div class="si"><div class="sn">3,007</div><p>ESCO Occupations</p></div>
+        <div class="si"><div class="sn">13,896</div><p>Skills Mapped</p></div>
+        <div class="si"><div class="sn">25/25</div><p>Tests Passing</p></div>
+    </div>
+    <div class="cta" style="max-width:800px;margin-top:2rem">
+        <h3 style="color:var(--g)">Built With</h3>
+        <div class="ts" style="margin-top:.8rem">
+            <span class="ti">Python 3.13 · FastAPI</span><span class="ti">ESCO + O*NET</span><span class="ti">React 19 · Tailwind 4</span><span class="ti">Qwen/LLaMA · HuggingFace</span><span class="ti">scikit-learn · Framer Motion</span><span class="ti">Docker · Render · Vercel</span>
+        </div>
+    </div>
+    <p style="font-size:1.5rem;color:var(--t2);font-weight:300;margin-top:2rem">Questions? Let's discuss!</p>
+    <p style="font-size:1.2rem;font-weight:700;color:var(--p);margin-top:.5rem">CareerLens — Where Careers Come Into Focus</p>
+    <p style="font-size:.95rem;color:#94a3b8;margin-top:.5rem;font-style:italic">Mitesh Rao · IM.Sc.IT Data Science · JG University · 2026</p>
+</div>
+</div>
+
+<!-- Nav -->
+<div class="nav"><button class="nb" onclick="ps()">‹</button><button class="nb" onclick="ns()">›</button></div>
+</div>
+
+<script>
+let c=0;const sl=document.querySelectorAll('.slide'),t=sl.length,pb=document.getElementById('pb');
+document.getElementById('ts').textContent=t;
+function up(){pb.style.width=((c+1)/t*100)+'%'}
+function ss(n,d){sl[c].classList.remove('active');const p=c;c=((n%t)+t)%t;const cur=sl[c],prev=sl[p];
+if(d==='n'){prev&&(prev.style.transform='translateX(-100%)',prev.style.opacity='0');cur.style.transform='translateX(100%)';cur.style.opacity='0'}
+else{prev&&(prev.style.transform='translateX(100%)',prev.style.opacity='0');cur.style.transform='translateX(-100%)';cur.style.opacity='0'}
+requestAnimationFrame(()=>{cur.style.opacity='1';cur.style.transform='translateX(0)';cur.classList.add('active');
+setTimeout(()=>{prev&&prev!==cur&&(prev.style.display='none');cur.style.display='flex';cur.scrollTop=0},100)});
+document.getElementById('cs').textContent=c+1;up()}
+function ns(){ss(c+1,'n')}function ps(){ss(c-1,'p')}
+sl.forEach((s,i)=>{if(i===0){s.style.transform='translateX(0)';s.style.opacity='1';s.classList.add('active');s.style.display='flex'}else{s.style.display='none';s.style.transform='translateX(100%)';s.style.opacity='0'}});up();
+document.addEventListener('keydown',e=>{switch(e.key){case'ArrowRight':case' ':case'PageDown':e.preventDefault();ns();break;case'ArrowLeft':case'PageUp':e.preventDefault();ps();break;case'Home':e.preventDefault();ss(0,'p');break;case'End':e.preventDefault();ss(t-1,'n');break;case'Escape':e.preventDefault();document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();break}});
+let tx=0;document.addEventListener('touchstart',e=>{tx=e.changedTouches[0].screenX});document.addEventListener('touchend',e=>{const d=tx-e.changedTouches[0].screenX;Math.abs(d)>50&&(d>0?ns():ps())});
+lucide.createIcons();
+</script>
+</body>
+</html>

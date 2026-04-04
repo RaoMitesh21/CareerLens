@@ -730,9 +730,9 @@ export default function DemoPage() {
         </motion.div>
       </div>
 
-      {/* Premium Get Started Card - appears after 5 seconds */}
+      {/* Premium Get Started Card - appears after 20 seconds */}
       <PremiumGetStartedCard 
-        delaySeconds={5} 
+        delaySeconds={20} 
         navigateTo="/signup"
         variant="default"
       />
