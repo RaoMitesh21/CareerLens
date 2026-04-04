@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - hotfix-auth-email
   workflow_dispatch:
 
 jobs:
