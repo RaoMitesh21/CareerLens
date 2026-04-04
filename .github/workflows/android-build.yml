@@ -44,9 +44,9 @@ jobs:
         working-directory: ./careerlens-frontend/android
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEYSTORE_PASSWORD: "careerlens123"
+          KEY_ALIAS: "upload"
+          KEY_PASSWORD: "careerlens123"
         run: |
           chmod +x ./gradlew
           ./gradlew bundleRelease
