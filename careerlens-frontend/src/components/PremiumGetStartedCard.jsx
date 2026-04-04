@@ -23,12 +23,18 @@ export default function PremiumGetStartedCard({
       return;
     }
 
-    // Always show after delay
-    const timer = window.setTimeout(() => {
-      setIsVisible(true);
-    }, delaySeconds * 1000);
+    // Check if user previously closed it
+    const hasClosed = typeof sessionStorage !== 'undefined' && 
+                      sessionStorage.getItem('careerlens_premium_card_closed') === 'true';
 
-    return () => window.clearTimeout(timer);
+    // Always show after delay, UI unless they already closed it
+    if (!hasClosed) {
+      const timer = window.setTimeout(() => {
+        setIsVisible(true);
+      }, delaySeconds * 1000);
+  
+      return () => window.clearTimeout(timer);
+    }
   }, [delaySeconds]);
 
   const handleClose = () => {
