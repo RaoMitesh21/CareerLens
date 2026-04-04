@@ -38,7 +38,7 @@ jobs:
         working-directory: ./careerlens-frontend/android/app
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: echo $KEYSTORE_BASE64 | base64 --decode > upload-keystore.jks
+        run: echo "$KEYSTORE_BASE64" | base64 --decode > upload-keystore.jks
         
       - name: Build Release Bundle
         working-directory: ./careerlens-frontend/android
