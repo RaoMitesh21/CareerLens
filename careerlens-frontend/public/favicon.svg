@@ -1,22 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="CareerLens">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0F172A" />
-      <stop offset="100%" stop-color="#1E293B" />
-    </linearGradient>
-    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#22D3EE" />
-      <stop offset="100%" stop-color="#06B6D4" />
-    </linearGradient>
-  </defs>
-
-  <rect x="8" y="8" width="112" height="112" rx="24" fill="url(#bg)" />
-
-  <circle cx="58" cy="58" r="26" fill="none" stroke="#E2E8F0" stroke-width="10" />
-  <circle cx="58" cy="58" r="14" fill="none" stroke="url(#accent)" stroke-width="8" />
-
-  <path d="M77 77 L102 102" stroke="#E2E8F0" stroke-width="10" stroke-linecap="round" />
-  <path d="M80 80 L102 102" stroke="url(#accent)" stroke-width="6" stroke-linecap="round" />
-
-  <path d="M39 58 L51 70 L75 46" fill="none" stroke="url(#accent)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+<svg width="128" height="128" viewBox="-55 -55 110 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M 35,-35 A 50,50 0 1,0 35,35" stroke="#232B32" stroke-width="14" stroke-linecap="round" fill="none"/>
+  <path d="M 20,-20 A 28,28 0 1,0 20,20" stroke="#232B32" stroke-width="14" stroke-linecap="round" fill="none"/>
+  <polyline points="-30,30 0,0 15,10 55,-35" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <polyline points="-30,30 0,0 15,10 55,-35" stroke="#00C2CB" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M 35,-35 L 55,-35 L 55,-15" stroke="#00C2CB" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 </svg>
