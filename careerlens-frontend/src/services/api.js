@@ -14,6 +14,13 @@ function resolveApiBaseUrl() {
   const hostname = window.location.hostname;
   const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
 
+  const isCapacitor = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
+
+  // Mobile App (Capacitor) should ALWAYS point to the live server
+  if (isCapacitor) {
+    return envUrl || 'https://careerlens-api-imy1.onrender.com';
+  }
+
   // Local development: route through Vite proxy to avoid CORS issues
   if (isLocalhost) {
     return '/api';
