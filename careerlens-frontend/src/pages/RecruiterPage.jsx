@@ -88,6 +88,9 @@ const ANALYSIS_MODE_OPTIONS = [
   { id: 'hybrid', label: 'Hybrid' },
 ];
 
+const BATCH_CHUNK_SIZE = 5;
+const BATCH_CONCURRENCY = 2;
+
 const formatPct = (value) => `${Number(value || 0).toFixed(1)}%`;
 
 const scoreColor = (score) => {
@@ -109,6 +112,111 @@ const riskClass = (risk) => {
   }
   return 'bg-red-100 text-red-700 border-red-200';
 };
+
+const normalizeName = (value = '') => String(value).trim().toLowerCase();
+
+const candidateReportKey = (candidate = {}) => {
+  const mode = String(candidate.analysis_mode || 'esco').toLowerCase();
+  const role = normalizeName(candidate.role_title || '');
+  const name = normalizeName(candidate.candidate_name || candidate.name || 'candidate');
+  return `${role}::${name}::${mode}`;
+};
+
+const shortlistKey = (candidate = {}) => [
+  normalizeName(candidate.role_title || ''),
+  normalizeName(candidate.candidate_name || candidate.name || ''),
+  normalizeName(candidate.analysis_mode || 'esco'),
+].join('::');
+
+const isSameCandidate = (entry = {}, candidate = {}, roleFallback = '') => {
+  const entryName = normalizeName(entry.candidate_name || entry.name || '');
+  const candidateName = normalizeName(candidate.candidate_name || candidate.name || '');
+  if (!entryName || !candidateName || entryName !== candidateName) {
+    return false;
+  }
+
+  const entryMode = normalizeName(entry.analysis_mode || 'esco');
+  const candidateMode = normalizeName(candidate.analysis_mode || 'esco');
+  if (entryMode !== candidateMode) {
+    return false;
+  }
+
+  const entryRole = normalizeName(entry.role_title || roleFallback || '');
+  const candidateRole = normalizeName(candidate.role_title || roleFallback || '');
+
+  if (!entryRole || !candidateRole) {
+    return true;
+  }
+
+  return entryRole === candidateRole;
+};
+
+const normalizeShortlistCandidate = (candidate, roleTitle) => {
+  const candidateName = candidate?.candidate_name || candidate?.name || '';
+  const mode = String(candidate?.analysis_mode || 'esco').toLowerCase() === 'hybrid' ? 'hybrid' : 'esco';
+
+  return {
+    ...candidate,
+    id: candidate?.id || candidateReportKey(candidate),
+    role_title: String(roleTitle || candidate?.role_title || '').trim(),
+    candidate_name: String(candidateName).trim(),
+    analysis_mode: mode,
+    shortlisted_at: candidate?.shortlisted_at || Date.now(),
+  };
+};
+
+const rankBatchCandidates = (candidates = [], mode = 'esco') => {
+  const normalizedMode = String(mode || '').toLowerCase() === 'hybrid' ? 'hybrid' : 'esco';
+
+  return [...candidates]
+    .sort((a, b) => {
+      const decisionDiff = Number(b.decision_score || b.overall_score || 0) - Number(a.decision_score || a.overall_score || 0);
+      if (decisionDiff !== 0) return decisionDiff;
+
+      const coreDiff = Number(b.core_match || 0) - Number(a.core_match || 0);
+      if (coreDiff !== 0) return coreDiff;
+
+      const overallDiff = Number(b.overall_score || 0) - Number(a.overall_score || 0);
+      if (overallDiff !== 0) return overallDiff;
+
+      return Number(a.missing_count || 0) - Number(b.missing_count || 0);
+    })
+    .map((candidate, index) => ({
+      ...candidate,
+      rank: index + 1,
+      analysis_mode: candidate.analysis_mode || normalizedMode,
+    }));
+};
+
+const splitIntoChunks = (items = [], chunkSize = BATCH_CHUNK_SIZE) => {
+  const size = Math.max(1, Number(chunkSize) || BATCH_CHUNK_SIZE);
+  const chunks = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+};
+
+async function runChunkedBatches(payloadChunks, targetRole, mode, onProgress) {
+  const combined = [];
+
+  for (let start = 0; start < payloadChunks.length; start += BATCH_CONCURRENCY) {
+    const window = payloadChunks.slice(start, start + BATCH_CONCURRENCY);
+    const results = await Promise.all(
+      window.map((chunk) => batchAnalyzeResumes(chunk, targetRole, mode))
+    );
+
+    results.forEach((result) => {
+      combined.push(...(result?.candidates || []));
+    });
+
+    if (onProgress) {
+      onProgress(Math.min(payloadChunks.length, start + window.length));
+    }
+  }
+
+  return combined;
+}
 
 const escapeCsvCell = (value) => {
   const text = String(value ?? '');
@@ -161,7 +269,7 @@ function MetricBar({ label, value, color }) {
   );
 }
 
-function CandidateCard({ candidate, index, shortlisted, onToggleShortlist }) {
+function CandidateCard({ candidate, index, shortlisted, isActiveReport, onToggleShortlist, onOpenReport }) {
   const decision = Number(candidate.decision_score ?? candidate.overall_score ?? 0);
   const name = candidate.candidate_name || candidate.name || 'Unknown Candidate';
   const strengths = candidate.top_strengths || [];
@@ -173,17 +281,17 @@ function CandidateCard({ candidate, index, shortlisted, onToggleShortlist }) {
       initial={{ y: 8, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: 0.04 * index }}
-      className="glass-card p-5"
+      className={`glass-card p-5 sm:p-6 border transition-all ${isActiveReport ? 'ring-2 ring-primary/30 border-primary/30' : ''}`}
     >
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+      <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5 sm:gap-6">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4">
             <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-semibold bg-primary/10 text-ink">
               {name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
             </div>
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-ink truncate">#{candidate.rank || index + 1} {name}</div>
-              <div className="text-xs text-ink-muted truncate">{candidate.recommendation || 'Review Pending'}</div>
+              <div className="text-base font-semibold text-ink truncate">#{candidate.rank || index + 1} {name}</div>
+              <div className="text-xs sm:text-sm text-ink-muted truncate">{candidate.recommendation || 'Review Pending'}</div>
             </div>
             <span className={`text-[11px] px-2 py-0.5 rounded-full border font-semibold ${riskClass(candidate.risk_level || 'Medium')}`}>
               Risk: {candidate.risk_level || 'Medium'}
@@ -197,15 +305,15 @@ function CandidateCard({ candidate, index, shortlisted, onToggleShortlist }) {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
             <MetricBar label="Core Match" value={candidate.core_match} color="#22c55e" />
             <MetricBar label="Secondary" value={candidate.secondary_match} color="#00C2CB" />
             <MetricBar label="Bonus" value={candidate.bonus_match} color="#3b82f6" />
           </div>
 
-          <div className="flex flex-wrap gap-2 mb-2">
+          <div className="flex flex-wrap gap-2 mb-3">
             {(strengths || []).slice(0, 4).map((skill, i) => (
-              <span key={`${skill}-${i}`} className="px-2 py-0.5 text-xs rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span key={`${skill}-${i}`} className="px-2.5 py-1 text-xs rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
                 {skill}
               </span>
             ))}
@@ -217,7 +325,7 @@ function CandidateCard({ candidate, index, shortlisted, onToggleShortlist }) {
           {gaps.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {gaps.slice(0, 3).map((gap, i) => (
-                <span key={`${gap}-${i}`} className="px-2 py-0.5 text-xs rounded-md bg-orange-50 text-orange-700 border border-orange-200">
+                <span key={`${gap}-${i}`} className="px-2.5 py-1 text-xs rounded-md bg-orange-50 text-orange-700 border border-orange-200">
                   Gap: {gap}
                 </span>
               ))}
@@ -225,20 +333,20 @@ function CandidateCard({ candidate, index, shortlisted, onToggleShortlist }) {
           )}
         </div>
 
-        <div className="w-full lg:w-52 shrink-0 rounded-xl border border-surface-alt bg-surface/50 p-4">
+        <div className="w-full xl:w-64 shrink-0 rounded-xl border border-surface-alt bg-surface/50 p-4 sm:p-5">
           <p className="text-[11px] uppercase tracking-wider text-ink-muted">Decision Score</p>
-          <p className="text-3xl font-bold" style={{ color: scoreColor(decision) }}>{formatPct(decision)}</p>
+          <p className="text-3xl sm:text-4xl font-bold" style={{ color: scoreColor(decision) }}>{formatPct(decision)}</p>
           <div className="mt-2 text-xs text-ink-muted space-y-1">
             <p>Overall: {formatPct(candidate.overall_score)}</p>
             <p>Coverage: {formatPct(candidate.skill_coverage_ratio)}</p>
             <p>Missing: {candidate.missing_count ?? 0}</p>
           </div>
 
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-2">
             <button
               type="button"
-              onClick={() => onToggleShortlist(name)}
-              className={`flex-1 text-xs font-semibold rounded-md px-2 py-2 border ${
+              onClick={() => onToggleShortlist(candidate)}
+              className={`text-xs font-semibold rounded-md px-2 py-2 border ${
                 shortlisted
                   ? 'bg-emerald-600 border-emerald-700 text-white'
                   : 'bg-white border-surface-alt text-ink-muted hover:bg-surface'
@@ -246,9 +354,13 @@ function CandidateCard({ candidate, index, shortlisted, onToggleShortlist }) {
             >
               {shortlisted ? 'Shortlisted' : 'Shortlist'}
             </button>
-            <Link to="/demo" className="text-xs font-semibold rounded-md px-2 py-2 border border-surface-alt text-ink-muted hover:bg-surface">
-              View
-            </Link>
+            <button
+              type="button"
+              onClick={() => onOpenReport(candidate)}
+              className={`text-xs font-semibold rounded-md px-2 py-2 border ${isActiveReport ? 'bg-primary text-white border-primary' : 'bg-white border-surface-alt text-ink-muted hover:bg-surface'}`}
+            >
+              {isActiveReport ? 'Report Open' : 'Open Report'}
+            </button>
           </div>
         </div>
       </div>
@@ -271,6 +383,7 @@ export default function RecruiterPage() {
   const [matchFilter, setMatchFilter] = useState('All');
   const [riskFilter, setRiskFilter] = useState('All');
   const [shortlist, setShortlist] = useState([]);
+  const [activeReportKey, setActiveReportKey] = useState('');
   const [isStateHydrated, setIsStateHydrated] = useState(false);
 
   const fileInputRef = useRef(null);
@@ -316,7 +429,14 @@ export default function RecruiterPage() {
             setRiskFilter(saved.riskFilter);
           }
           if (Array.isArray(saved.shortlist)) {
-            setShortlist(saved.shortlist);
+            setShortlist(
+              saved.shortlist
+                .map((entry) => (typeof entry === 'string' ? { candidate_name: entry } : entry))
+                .filter((entry) => entry && (entry.candidate_name || entry.name))
+            );
+          }
+          if (typeof saved.activeReportKey === 'string') {
+            setActiveReportKey(saved.activeReportKey);
           }
         }
       } catch {
@@ -356,7 +476,14 @@ export default function RecruiterPage() {
               setRiskFilter(saved.riskFilter);
             }
             if (Array.isArray(saved.shortlist)) {
-              setShortlist(saved.shortlist);
+              setShortlist(
+                saved.shortlist
+                  .map((entry) => (typeof entry === 'string' ? { candidate_name: entry } : entry))
+                  .filter((entry) => entry && (entry.candidate_name || entry.name))
+              );
+            }
+            if (typeof saved.activeReportKey === 'string') {
+              setActiveReportKey(saved.activeReportKey);
             }
           }
         } catch {
@@ -396,6 +523,7 @@ export default function RecruiterPage() {
       matchFilter,
       riskFilter,
       shortlist,
+      activeReportKey,
       savedAt: Date.now(),
     };
 
@@ -425,6 +553,7 @@ export default function RecruiterPage() {
     matchFilter,
     riskFilter,
     shortlist,
+    activeReportKey,
   ]);
 
   const handleRoleSearch = async (query) => {
@@ -518,7 +647,7 @@ export default function RecruiterPage() {
 
     setError('');
     setIsLoading(true);
-    setLoadingMsg('Analyzing and ranking candidates...');
+    setLoadingMsg('Analyzing candidates in parallel batches...');
 
     try {
       const batchData = uploadedFiles.map((f) => ({
@@ -526,14 +655,25 @@ export default function RecruiterPage() {
         candidate_name: f.candidate_name,
       }));
 
-      const result = await batchAnalyzeResumes(batchData, targetRole, analysisMode);
-      const normalizedCandidates = (result.candidates || []).map((candidate) => ({
-        ...candidate,
-        analysis_mode: candidate.analysis_mode || analysisMode,
-      }));
+      const payloadChunks = splitIntoChunks(batchData, BATCH_CHUNK_SIZE);
+      const mergedCandidates = await runChunkedBatches(
+        payloadChunks,
+        targetRole,
+        analysisMode,
+        (done) => {
+          setLoadingMsg(`Analyzing candidates in parallel batches... (${done}/${payloadChunks.length})`);
+        }
+      );
+
+      const normalizedCandidates = rankBatchCandidates(mergedCandidates, analysisMode);
       setCandidates(normalizedCandidates);
       setUseDemo(false);
-      setShortlist([]);
+      setActiveReportKey(candidateReportKey(normalizedCandidates[0] || {}));
+      setShortlist((prev) => {
+        return prev.filter((entry) =>
+          normalizedCandidates.some((candidate) => isSameCandidate(entry, candidate, targetRole))
+        );
+      });
     } catch (err) {
       setError(err.message || 'Batch analysis failed.');
     } finally {
@@ -571,6 +711,23 @@ export default function RecruiterPage() {
     return rows.map((row, idx) => ({ ...row, rank: idx + 1 }));
   }, [rawCandidates, matchFilter, riskFilter, sortBy]);
 
+  useEffect(() => {
+    if (!filteredCandidates.length) {
+      setActiveReportKey('');
+      return;
+    }
+
+    const exists = filteredCandidates.some((candidate) => candidateReportKey(candidate) === activeReportKey);
+    if (!exists) {
+      setActiveReportKey(candidateReportKey(filteredCandidates[0]));
+    }
+  }, [filteredCandidates, activeReportKey]);
+
+  const activeReportCandidate = useMemo(
+    () => filteredCandidates.find((candidate) => candidateReportKey(candidate) === activeReportKey) || filteredCandidates[0] || null,
+    [filteredCandidates, activeReportKey]
+  );
+
   const stats = useMemo(() => {
     const list = filteredCandidates;
     const avgDecision = list.length
@@ -589,16 +746,42 @@ export default function RecruiterPage() {
     };
   }, [filteredCandidates]);
 
-  const toggleShortlist = (name) => {
-    setShortlist((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]));
+  const toggleShortlist = (candidate) => {
+    const entry = normalizeShortlistCandidate(candidate, targetRole || candidate?.role_title || '');
+
+    setShortlist((prev) => {
+      const exists = prev.some((item) => isSameCandidate(item, entry, targetRole));
+      if (exists) {
+        return prev.filter((item) => !isSameCandidate(item, entry, targetRole));
+      }
+
+      return [entry, ...prev].slice(0, 50);
+    });
   };
 
   const shortlistedCandidates = useMemo(() => {
     if (!shortlist.length) {
       return [];
     }
-    return rawCandidates.filter((candidate) => shortlist.includes(candidate.candidate_name || candidate.name || ''));
-  }, [rawCandidates, shortlist]);
+    const shortlistEntries = shortlist
+      .map((entry) => (typeof entry === 'string' ? { candidate_name: entry } : entry))
+      .filter((entry) => entry && (entry.candidate_name || entry.name));
+
+    return shortlistEntries
+      .map((entry) => {
+        const entryName = normalizeName(entry.candidate_name || entry.name || '');
+        const sourceCandidate = rawCandidates.find((candidate) => normalizeName(candidate.candidate_name || candidate.name || '') === entryName);
+        return {
+          ...(sourceCandidate || {}),
+          ...entry,
+          candidate_name: entry.candidate_name || sourceCandidate?.candidate_name || sourceCandidate?.name || '',
+          role_title: entry.role_title || sourceCandidate?.role_title || targetRole,
+          analysis_mode: entry.analysis_mode || sourceCandidate?.analysis_mode || analysisMode,
+        };
+      })
+      .filter((candidate) => !targetRole.trim() || !candidate.role_title || normalizeName(candidate.role_title) === normalizeName(targetRole))
+      .sort((a, b) => Number(b.decision_score || b.overall_score || 0) - Number(a.decision_score || a.overall_score || 0));
+  }, [shortlist, rawCandidates, targetRole, analysisMode]);
 
   const topThreeComparison = useMemo(() => filteredCandidates.slice(0, 3), [filteredCandidates]);
 
@@ -609,7 +792,10 @@ export default function RecruiterPage() {
     }
 
     const headers = [
+      'Role',
       'Candidate Name',
+      'Analysis Mode',
+      'Shortlisted At',
       'Recommendation',
       'Risk Level',
       'Decision Score',
@@ -624,7 +810,10 @@ export default function RecruiterPage() {
     ];
 
     const rows = shortlistedCandidates.map((candidate) => [
+      candidate.role_title || targetRole || '',
       candidate.candidate_name || candidate.name || '',
+      String(candidate.analysis_mode || analysisMode || 'esco').toUpperCase(),
+      candidate.shortlisted_at ? new Date(candidate.shortlisted_at).toISOString() : '',
       candidate.recommendation || '',
       candidate.risk_level || '',
       formatPct(candidate.decision_score || candidate.overall_score),
@@ -900,20 +1089,99 @@ export default function RecruiterPage() {
           </div>
 
           {filteredCandidates.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {filteredCandidates.map((candidate, i) => (
                 <CandidateCard
                   key={`${candidate.candidate_name || candidate.name || 'candidate'}-${i}`}
                   candidate={candidate}
                   index={i}
-                  shortlisted={shortlist.includes(candidate.candidate_name || candidate.name || '')}
+                  shortlisted={shortlist.some((entry) => isSameCandidate(entry, candidate, targetRole))}
+                  isActiveReport={candidateReportKey(candidate) === candidateReportKey(activeReportCandidate || {})}
                   onToggleShortlist={toggleShortlist}
+                  onOpenReport={(row) => setActiveReportKey(candidateReportKey(row))}
                 />
               ))}
             </div>
           ) : (
             <div className="text-center py-12 text-ink-muted">
               <p className="text-sm">No candidates match current filters. Try changing filter settings.</p>
+            </div>
+          )}
+        </div>
+
+        <div className="glass-card p-5 sm:p-6 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+            <h3 className="text-base sm:text-lg font-semibold text-ink">Candidate Report Workspace</h3>
+            <span className="text-xs text-ink-muted">Spacious detailed view for one candidate at a time</span>
+          </div>
+
+          {!activeReportCandidate ? (
+            <p className="text-sm text-ink-muted">Select a candidate to view the full report details.</p>
+          ) : (
+            <div className="space-y-5">
+              <div className="rounded-2xl border border-surface-alt bg-surface/60 p-4 sm:p-5">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-ink-muted">Candidate</p>
+                    <h4 className="text-xl font-bold text-ink mt-1">
+                      {activeReportCandidate.candidate_name || activeReportCandidate.name || 'Candidate'}
+                    </h4>
+                    <p className="text-sm text-ink-muted mt-1">{activeReportCandidate.recommendation || 'Review Pending'}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full border font-semibold ${riskClass(activeReportCandidate.risk_level || 'Medium')}`}>
+                        {activeReportCandidate.risk_level || 'Medium'} Risk
+                      </span>
+                      <span className="text-[11px] px-2 py-0.5 rounded-full border font-semibold bg-slate-100 text-slate-700 border-slate-200">
+                        Source {String(activeReportCandidate.analysis_mode || analysisMode || 'esco').toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-left lg:text-right">
+                    <p className="text-xs uppercase tracking-wider text-ink-muted">Decision Score</p>
+                    <p className="text-4xl font-bold" style={{ color: scoreColor(activeReportCandidate.decision_score || activeReportCandidate.overall_score) }}>
+                      {formatPct(activeReportCandidate.decision_score || activeReportCandidate.overall_score)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                <div className="rounded-xl border border-surface-alt bg-surface p-4">
+                  <p className="text-xs uppercase tracking-wider text-ink-muted">Overall</p>
+                  <p className="text-xl font-bold text-ink mt-1">{formatPct(activeReportCandidate.overall_score)}</p>
+                </div>
+                <div className="rounded-xl border border-surface-alt bg-surface p-4">
+                  <p className="text-xs uppercase tracking-wider text-ink-muted">Core Match</p>
+                  <p className="text-xl font-bold text-ink mt-1">{formatPct(activeReportCandidate.core_match)}</p>
+                </div>
+                <div className="rounded-xl border border-surface-alt bg-surface p-4">
+                  <p className="text-xs uppercase tracking-wider text-ink-muted">Coverage</p>
+                  <p className="text-xl font-bold text-ink mt-1">{formatPct(activeReportCandidate.skill_coverage_ratio)}</p>
+                </div>
+                <div className="rounded-xl border border-surface-alt bg-surface p-4">
+                  <p className="text-xs uppercase tracking-wider text-ink-muted">Missing Skills</p>
+                  <p className="text-xl font-bold text-ink mt-1">{activeReportCandidate.missing_count ?? 0}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+                  <p className="text-xs uppercase tracking-wider text-emerald-700 font-semibold mb-2">Top Strengths</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(activeReportCandidate.top_strengths || []).length ? (activeReportCandidate.top_strengths || []).slice(0, 8).map((item, idx) => (
+                      <span key={`${item}-${idx}`} className="px-2.5 py-1 text-xs rounded-md bg-white border border-emerald-200 text-emerald-700">{item}</span>
+                    )) : <span className="text-xs text-ink-muted">No strengths available.</span>}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+                  <p className="text-xs uppercase tracking-wider text-amber-700 font-semibold mb-2">Top Gaps</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(activeReportCandidate.top_gaps || []).length ? (activeReportCandidate.top_gaps || []).slice(0, 8).map((item, idx) => (
+                      <span key={`${item}-${idx}`} className="px-2.5 py-1 text-xs rounded-md bg-white border border-amber-200 text-amber-700">{item}</span>
+                    )) : <span className="text-xs text-ink-muted">No major gaps detected.</span>}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

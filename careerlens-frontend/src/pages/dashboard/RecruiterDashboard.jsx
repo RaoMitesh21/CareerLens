@@ -28,7 +28,9 @@ import Logo from '../../components/Logo';
 import {
   analyzeHybridDiagnostics,
   batchAnalyzeResumes,
+  getDashboardState,
   parseFileToText,
+  saveDashboardState,
   searchOccupations,
 } from '../../services/api';
 import { parseResumeText } from '../../services/resumeParser';
@@ -39,6 +41,8 @@ const tierClassMap = {
   review: 'bg-amber-100 text-amber-700',
 };
 
+const RECRUITER_DASHBOARD_STORAGE_KEY = 'careerlens_recruiter_dashboard_v2';
+
 const ANALYSIS_MODE_OPTIONS = [
   { id: 'esco', label: 'ESCO' },
   { id: 'hybrid', label: 'Hybrid' },
@@ -48,8 +52,9 @@ function normalizeText(value = '') {
   return String(value).trim().toLowerCase();
 }
 
-function shortlistKey(roleTitle = '', candidateName = '') {
-  return `${normalizeText(roleTitle)}::${normalizeText(candidateName)}`;
+function shortlistKey(roleTitle = '', candidateName = '', analysisMode = 'esco') {
+  const mode = String(analysisMode || '').toLowerCase() === 'hybrid' ? 'hybrid' : 'esco';
+  return `${normalizeText(roleTitle)}::${normalizeText(candidateName)}::${mode}`;
 }
 
 function toTier(matchLabel = '') {
@@ -304,6 +309,9 @@ const RecruiterDashboard = () => {
   const [analysisProgress, setAnalysisProgress] = useState({ done: 0, total: 0 });
   const [isDragActive, setIsDragActive] = useState(false);
   const [reportCopied, setReportCopied] = useState(false);
+  const [isStateHydrated, setIsStateHydrated] = useState(false);
+
+  const saveTimerRef = useRef(null);
 
   useEffect(() => {
     const onClickOutside = (event) => {
@@ -311,13 +319,157 @@ const RecruiterDashboard = () => {
         setShowRoleSuggestions(false);
       }
     };
+    const onEscape = (event) => {
+      if (event.key === 'Escape') {
+        setSidebarOpen(false);
+        setShowRoleSuggestions(false);
+      }
+    };
 
     document.addEventListener('mousedown', onClickOutside);
+    document.addEventListener('keydown', onEscape);
     return () => {
       document.removeEventListener('mousedown', onClickOutside);
+      document.removeEventListener('keydown', onEscape);
       clearTimeout(roleDebounceRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const hydrate = async () => {
+      let hasRemoteState = false;
+
+      try {
+        const remote = await getDashboardState('recruiter');
+        const saved = remote?.state || {};
+
+        if (saved && Object.keys(saved).length > 0) {
+          hasRemoteState = true;
+          if (typeof saved.activeMenu === 'string') {
+            setActiveMenu(saved.activeMenu);
+          }
+          if (typeof saved.jobTitle === 'string') {
+            setJobTitle(saved.jobTitle);
+          }
+          if (typeof saved.analysisMode === 'string') {
+            setAnalysisMode(saved.analysisMode === 'hybrid' ? 'hybrid' : 'esco');
+          }
+          if (Array.isArray(saved.analysisResults)) {
+            setAnalysisResults(saved.analysisResults);
+          }
+          if (typeof saved.filterTier === 'string') {
+            setFilterTier(saved.filterTier);
+          }
+          if (Array.isArray(saved.savedShortlists)) {
+            setSavedShortlists(saved.savedShortlists);
+          }
+          if (saved.selectedCandidate && typeof saved.selectedCandidate === 'object') {
+            setSelectedCandidate(saved.selectedCandidate);
+          }
+          if (typeof saved.sidebarOpen === 'boolean') {
+            setSidebarOpen(saved.sidebarOpen);
+          }
+        }
+      } catch {
+        // Ignore backend hydration failures and try local fallback.
+      }
+
+      if (!hasRemoteState) {
+        try {
+          const raw = localStorage.getItem(RECRUITER_DASHBOARD_STORAGE_KEY);
+          if (raw) {
+            const saved = JSON.parse(raw);
+            if (typeof saved.activeMenu === 'string') {
+              setActiveMenu(saved.activeMenu);
+            }
+            if (typeof saved.jobTitle === 'string') {
+              setJobTitle(saved.jobTitle);
+            }
+            if (typeof saved.analysisMode === 'string') {
+              setAnalysisMode(saved.analysisMode === 'hybrid' ? 'hybrid' : 'esco');
+            }
+            if (Array.isArray(saved.analysisResults)) {
+              setAnalysisResults(saved.analysisResults);
+            }
+            if (typeof saved.filterTier === 'string') {
+              setFilterTier(saved.filterTier);
+            }
+            if (Array.isArray(saved.savedShortlists)) {
+              setSavedShortlists(saved.savedShortlists);
+            }
+            if (saved.selectedCandidate && typeof saved.selectedCandidate === 'object') {
+              setSelectedCandidate(saved.selectedCandidate);
+            }
+            if (typeof saved.sidebarOpen === 'boolean') {
+              setSidebarOpen(saved.sidebarOpen);
+            }
+          }
+        } catch {
+          // Ignore malformed local persisted dashboard state.
+        }
+      }
+
+      if (!cancelled) {
+        setIsStateHydrated(true);
+      }
+    };
+
+    hydrate();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!isStateHydrated || !user?.id) {
+      return;
+    }
+
+    const snapshot = {
+      activeMenu,
+      jobTitle,
+      analysisMode,
+      analysisResults,
+      filterTier,
+      savedShortlists,
+      selectedCandidate,
+      sidebarOpen,
+      savedAt: Date.now(),
+    };
+
+    try {
+      localStorage.setItem(RECRUITER_DASHBOARD_STORAGE_KEY, JSON.stringify(snapshot));
+    } catch {
+      // Ignore local fallback storage issues.
+    }
+
+    clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveDashboardState('recruiter', snapshot).catch(() => {
+        // Ignore transient persistence failures.
+      });
+    }, 700);
+
+    return () => clearTimeout(saveTimerRef.current);
+  }, [
+    isStateHydrated,
+    user?.id,
+    activeMenu,
+    jobTitle,
+    analysisMode,
+    analysisResults,
+    filterTier,
+    savedShortlists,
+    selectedCandidate,
+    sidebarOpen,
+  ]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -476,9 +628,10 @@ const RecruiterDashboard = () => {
 
   const findSavedShortlist = (candidate, roleTitleOverride) => {
     const roleTitle = roleTitleOverride || candidate?.role_title || jobTitle;
-    const key = shortlistKey(roleTitle, candidate?.candidate_name);
+    const mode = candidate?.analysis_mode || analysisMode;
+    const key = shortlistKey(roleTitle, candidate?.candidate_name, mode);
     return savedShortlists.find(
-      (entry) => shortlistKey(entry.role_title, entry.candidate_name) === key
+      (entry) => shortlistKey(entry.role_title, entry.candidate_name, entry.analysis_mode) === key
     );
   };
 
@@ -493,7 +646,8 @@ const RecruiterDashboard = () => {
       return;
     }
 
-    const key = shortlistKey(roleTitle, candidate.candidate_name);
+    const candidateMode = String(candidate.analysis_mode || analysisMode).toLowerCase() === 'hybrid' ? 'hybrid' : 'esco';
+    const key = shortlistKey(roleTitle, candidate.candidate_name, candidateMode);
     if (shortlistBusyKey === key) {
       return;
     }
@@ -520,7 +674,7 @@ const RecruiterDashboard = () => {
           secondary_match: candidate.secondary_match ?? null,
           bonus_match: candidate.bonus_match ?? null,
           match_label: candidate.match_label ?? null,
-          analysis_mode: String(candidate.analysis_mode || analysisMode).toLowerCase() === 'hybrid' ? 'hybrid' : 'esco',
+          analysis_mode: candidateMode,
           top_strengths: candidate.top_strengths || [],
           top_gaps: candidate.top_gaps || [],
         };
@@ -532,7 +686,7 @@ const RecruiterDashboard = () => {
 
         setSavedShortlists((prev) => {
           const filtered = prev.filter(
-            (entry) => shortlistKey(entry.role_title, entry.candidate_name) !== key
+            (entry) => shortlistKey(entry.role_title, entry.candidate_name, entry.analysis_mode) !== key
           );
           return [saved, ...filtered];
         });
@@ -752,7 +906,7 @@ const RecruiterDashboard = () => {
 
   const Sidebar = () => (
     <aside
-      className={`fixed inset-y-0 left-0 w-64 glass-panel !border-y-0 !border-l-0 !rounded-none z-[100] flex flex-col transform transition-transform duration-300 md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      className={`fixed inset-y-0 left-0 z-[100] flex w-64 flex-col transform overflow-y-auto glass-panel !border-y-0 !border-l-0 !rounded-none transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
     >
       {/* Logo */}
       <div className="p-6 border-b border-slate-200/60 flex items-center justify-center">
@@ -983,10 +1137,10 @@ const RecruiterDashboard = () => {
           ))}
         </div>
 
-        <div className="space-y-3 max-h-[600px] overflow-y-auto">
+        <div className="space-y-3 lg:max-h-[600px] lg:overflow-y-auto">
           {filteredCandidates.map((candidate, index) => {
             const shortlisted = Boolean(findSavedShortlist(candidate, jobTitle));
-            const busy = shortlistBusyKey === shortlistKey(jobTitle, candidate.candidate_name);
+            const busy = shortlistBusyKey === shortlistKey(jobTitle, candidate.candidate_name, candidate.analysis_mode || analysisMode);
 
             const decisionScore = toSafePercent(candidate.decision_score);
             const riskLevel = candidate.risk_level || 'N/A';
@@ -1004,8 +1158,8 @@ const RecruiterDashboard = () => {
                     : 'glass-card hover:!border-cyan-300'
                 }`}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex-1 min-w-0 w-full">
                     <div className="flex items-center gap-2">
                       <h4 className="font-bold text-lg text-slate-900 tracking-tight truncate">{candidate.candidate_name}</h4>
                       <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${tierClassMap[candidate.tier] || tierClassMap.review}`}>
@@ -1033,7 +1187,7 @@ const RecruiterDashboard = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="text-right ml-3">
+                  <div className="sm:text-right sm:ml-3 w-full sm:w-auto">
                     <div className="text-3xl font-extrabold text-slate-900 tracking-tighter">
                       {toSafePercent(candidate.overall_score).toFixed(1)}<span className="text-xl text-slate-400">%</span>
                     </div>
@@ -1043,7 +1197,7 @@ const RecruiterDashboard = () => {
                         await toggleShortlist(candidate, jobTitle);
                       }}
                       disabled={busy}
-                      className={`mt-2 text-xs px-3 py-1.5 rounded-lg font-bold transition-colors ${
+                      className={`mt-2 w-full sm:w-auto text-xs px-3 py-1.5 rounded-lg font-bold transition-colors ${
                         shortlisted
                           ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -1231,14 +1385,15 @@ const RecruiterDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-50 via-white to-slate-100">
+    <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-50 via-white to-slate-100">
       <Sidebar />
 
       {/* Mobile Menu Button */}
       <motion.button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed top-4 left-4 z-50 p-2 rounded-xl bg-white/80 backdrop-blur-md border border-slate-200 shadow-sm md:hidden text-slate-700"
+        className="fixed left-4 top-[calc(1rem+env(safe-area-inset-top))] z-50 p-2 rounded-xl bg-white/80 backdrop-blur-md border border-slate-200 shadow-sm md:hidden text-slate-700"
         whileHover={{ scale: 1.05 }}
+        aria-label={sidebarOpen ? 'Close navigation' : 'Open navigation'}
       >
         {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
       </motion.button>
@@ -1254,7 +1409,7 @@ const RecruiterDashboard = () => {
       )}
 
       {/* Main Content */}
-      <div className="md:ml-64 min-h-screen p-3 pt-16 sm:p-4 sm:pt-16 md:p-6 md:pt-6">
+      <div className="relative z-0 min-h-screen p-4 pt-20 pb-8 sm:p-4 sm:pt-16 md:ml-64 md:p-6 md:pt-6">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1390,7 +1545,7 @@ const RecruiterDashboard = () => {
 
                     {diagnosticsResult && (
                       <div className="mt-3 space-y-2 text-xs">
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                           <div className="p-2 rounded-lg bg-white border border-slate-200">
                             <p className="text-slate-500">ESCO</p>
                             <p className="font-bold text-slate-900">{toSafePercent(diagnosticsResult.esco_overall_score).toFixed(1)}%</p>
@@ -1418,7 +1573,7 @@ const RecruiterDashboard = () => {
                     )}
                   </div>
 
-                  <div className="mb-8 grid grid-cols-2 gap-3">
+                  <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
                       <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Coverage</p>
                       <p className="text-xl font-extrabold text-slate-900 mt-1">{toSafePercent(selectedCandidate.skill_coverage_ratio).toFixed(1)}%</p>

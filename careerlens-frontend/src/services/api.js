@@ -12,9 +12,12 @@ function resolveApiBaseUrl() {
   }
 
   const hostname = window.location.hostname;
-  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+  const port = window.location.port;
+  const protocol = window.location.protocol;
 
-  const isCapacitor = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
+  // React Dev server runs on port 5173. Capacitor Android runs on localhost with NO port. iOS runs on capacitor://
+  const isCapacitor = (hostname === 'localhost' && port === '') || protocol === 'capacitor:';
+  const isReactDevServer = (hostname === 'localhost' || hostname === '127.0.0.1') && port !== '';
 
   // Mobile App (Capacitor) should ALWAYS point to the live server
   if (isCapacitor) {
@@ -22,7 +25,7 @@ function resolveApiBaseUrl() {
   }
 
   // Local development: route through Vite proxy to avoid CORS issues
-  if (isLocalhost) {
+  if (isReactDevServer) {
     return '/api';
   }
 
