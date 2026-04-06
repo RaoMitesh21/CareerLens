@@ -5,7 +5,7 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import {
   LogOut, Upload, BarChart3, Lightbulb,
   FileText, TrendingUp, Target, CheckCircle, AlertCircle, CalendarDays,
-  SendHorizontal, X
+  SendHorizontal, Menu, X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -419,6 +419,7 @@ const StudentDashboard = () => {
   const [isBotLoading, setIsBotLoading] = useState(false);
   const [isBotOpen, setIsBotOpen] = useState(false);
   const [isStateHydrated, setIsStateHydrated] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -826,6 +827,18 @@ const StudentDashboard = () => {
     }
   }, [botMessages, isBotLoading]);
 
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setIsSidebarOpen(false);
+        setIsBotOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, []);
+
   // Navigation items
   const navItems = [
     { id: 'resume', label: 'Resume', icon: FileText },
@@ -876,7 +889,7 @@ const StudentDashboard = () => {
       key="resume"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="grid grid-cols-3 gap-8"
+      className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8"
     >
       <div className="col-span-2 glass-panel p-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Resume Analyzer</h2>
@@ -1099,7 +1112,7 @@ const StudentDashboard = () => {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 sm:gap-6">
             {[
               { label: 'Overall', value: `${analysis.overall_score.toFixed(1)}%` },
               { label: 'Core Match', value: `${analysis.core_match.toFixed(1)}%` },
@@ -1113,7 +1126,7 @@ const StudentDashboard = () => {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
             <div className="rounded-2xl border border-green-200 bg-white/80 p-8">
               <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <CheckCircle className="text-green-600" size={22} />
@@ -1607,7 +1620,7 @@ const StudentDashboard = () => {
             animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
             exit={{ opacity: 0, y: 20, scale: 0.95, rotate: 1 }}
             transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-            className="fixed bottom-24 right-6 z-50 w-[calc(100vw-2rem)] sm:w-[420px] rounded-3xl border border-cyan-200 bg-white/95 shadow-[0_16px_50px_-12px_rgba(6,182,212,0.4)] backdrop-blur-xl"
+            className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-4 right-4 z-50 flex max-h-[calc(100vh-7rem)] w-auto flex-col overflow-hidden rounded-3xl border border-cyan-200 bg-white/95 shadow-[0_16px_50px_-12px_rgba(6,182,212,0.4)] backdrop-blur-xl sm:bottom-24 sm:left-auto sm:right-6 sm:w-[420px] sm:max-h-[calc(100vh-8rem)]"
           >
             {/* Header with rounded-t-3xl so container doesn't need overflow-hidden but background still respects border */}
             <div className="flex items-center justify-between rounded-t-[1.35rem] bg-gradient-to-r from-cyan-50 to-blue-50 border-b border-cyan-100 px-5 py-4">
@@ -1631,7 +1644,7 @@ const StudentDashboard = () => {
               </button>
             </div>
 
-            <div ref={botScrollRef} className="max-h-[52vh] overflow-y-auto px-4 py-4 space-y-4">
+            <div ref={botScrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-4">
               {botMessages.map((msg, idx) => (
                 <div
                   key={`${msg.role}-${idx}`}
@@ -1747,9 +1760,27 @@ const StudentDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
+    <div className="min-h-screen overflow-x-hidden bg-gradient-to-br from-blue-50 via-white to-cyan-50">
+      <motion.button
+        type="button"
+        onClick={() => setIsSidebarOpen((prev) => !prev)}
+        className="fixed left-4 top-4 z-[70] inline-flex h-11 w-11 items-center justify-center rounded-full border border-cyan-200 bg-white/95 text-cyan-700 shadow-[0_8px_30px_rgba(6,182,212,0.18)] backdrop-blur-md md:hidden"
+        aria-label={isSidebarOpen ? 'Close navigation' : 'Open navigation'}
+      >
+        {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+      </motion.button>
+
+      {isSidebarOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-[1px] md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+          aria-label="Close navigation overlay"
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="fixed left-0 top-0 bottom-0 w-64 bg-white/80 backdrop-blur-xl border-r border-gray-200 p-6 flex flex-col z-40">
+      <div className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-gray-200 bg-white/80 p-6 backdrop-blur-xl transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         {/* Logo */}
         <div className="flex items-center justify-center mb-8">
           <Logo size="md" />
@@ -1769,7 +1800,10 @@ const StudentDashboard = () => {
             return (
               <motion.button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setIsSidebarOpen(false);
+                }}
                 whileHover={{ x: 4 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
                   activeTab === item.id
@@ -1797,7 +1831,7 @@ const StudentDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className="ml-64 p-8">
+      <div className="relative z-0 min-h-screen p-4 pt-20 pb-28 sm:p-6 sm:pt-6 sm:pb-8 md:ml-64 lg:p-8">
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <div className="flex items-center justify-between gap-4">
@@ -1813,7 +1847,7 @@ const StudentDashboard = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ staggerChildren: 0.1 }}
-          className="grid grid-cols-4 gap-6 mb-8"
+          className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 sm:gap-6"
         >
           {[
             { label: 'Resume Loaded', value: fileName ? '1' : '0', icon: FileText, color: 'cyan' },
@@ -1861,11 +1895,12 @@ const StudentDashboard = () => {
         onClick={() => setIsBotOpen((prev) => !prev)}
         whileHover={{ scale: 1.05, y: -4 }}
         whileTap={{ scale: 0.95 }}
-        className="fixed bottom-6 right-6 z-[60] flex items-center gap-3 rounded-full bg-white/95 backdrop-blur-md border-[2px] border-cyan-200 p-2 pr-6 shadow-[0_8px_30px_rgba(6,182,212,0.25)] hover:shadow-[0_8px_30px_rgba(6,182,212,0.4)] hover:border-cyan-400 transition-all duration-300 group"
+        className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-[60] flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-full border-[2px] border-cyan-200 bg-white/95 p-2 pr-4 shadow-[0_8px_30px_rgba(6,182,212,0.25)] backdrop-blur-md transition-all duration-300 group hover:border-cyan-400 hover:shadow-[0_8px_30px_rgba(6,182,212,0.4)] sm:right-6 sm:bottom-6 sm:pr-6"
+        aria-label={isBotOpen ? 'Close FutureFit AI chat' : 'Open FutureFit AI chat'}
       >
         {!isBotOpen && (
           <motion.span
-            className="absolute -top-12 right-0 rounded-2xl rounded-br-sm bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-[12px] font-bold px-3.5 py-2 shadow-lg z-[70] border border-cyan-400/50"
+            className="absolute -top-12 right-0 hidden rounded-2xl rounded-br-sm border border-cyan-400/50 bg-gradient-to-r from-cyan-500 to-blue-600 px-3.5 py-2 text-[12px] font-bold text-white shadow-lg z-[70] sm:block"
             animate={{ y: [0, -6, 0] }}
             transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
           >
@@ -1876,7 +1911,7 @@ const StudentDashboard = () => {
           <div className="absolute inset-0 rounded-full animate-ping bg-cyan-400 opacity-30 duration-1000" />
           <BotAvatarBadge size="md" />
         </div>
-        <span className="text-[15px] font-extrabold bg-gradient-to-r from-cyan-600 to-blue-700 bg-clip-text text-transparent group-hover:from-cyan-500 group-hover:to-blue-600 transition-all">
+        <span className="hidden text-[15px] font-extrabold bg-gradient-to-r from-cyan-600 to-blue-700 bg-clip-text text-transparent transition-all group-hover:from-cyan-500 group-hover:to-blue-600 sm:inline">
           FutureFit AI
         </span>
       </motion.button>
