@@ -7,7 +7,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func
+from sqlalchemy import func, inspect
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
@@ -46,8 +47,18 @@ def _coerce_list(value) -> list[str]:
     return [str(value).strip()] if str(value).strip() else []
 
 
-def _serialize_shortlist(entry: RecruiterShortlist) -> dict:
-    skill_rows = list(getattr(entry, "shortlist_skills", []) or [])
+def _shortlist_skills_table_available(db: Session) -> bool:
+    try:
+        bind = db.get_bind()
+        if bind is None:
+            return False
+        return inspect(bind).has_table("recruiter_shortlist_skills")
+    except Exception:
+        return False
+
+
+def _serialize_shortlist(entry: RecruiterShortlist, include_skill_rows: bool = True) -> dict:
+    skill_rows = list(getattr(entry, "shortlist_skills", []) or []) if include_skill_rows else []
     return {
         "id": entry.id,
         "recruiter_id": entry.recruiter_id,
@@ -146,15 +157,29 @@ def list_shortlists(
     db: Session = Depends(get_db),
 ):
     """Get saved shortlist entries for the authenticated recruiter."""
-    query = db.query(RecruiterShortlist).options(joinedload(RecruiterShortlist.shortlist_skills)).filter(
+    include_skill_rows = _shortlist_skills_table_available(db)
+    query = db.query(RecruiterShortlist).filter(
         RecruiterShortlist.recruiter_id == current_user.id,
     )
+    if include_skill_rows:
+        query = query.options(joinedload(RecruiterShortlist.shortlist_skills))
 
     if role:
         normalized_role = _normalize_key(role).lower()
         query = query.filter(func.lower(func.trim(RecruiterShortlist.role_title)) == normalized_role)
 
-    return [_serialize_shortlist(entry) for entry in query.order_by(RecruiterShortlist.created_at.desc()).all()]
+    try:
+        entries = query.order_by(RecruiterShortlist.created_at.desc()).all()
+        return [_serialize_shortlist(entry, include_skill_rows=include_skill_rows) for entry in entries]
+    except SQLAlchemyError:
+        fallback_query = db.query(RecruiterShortlist).filter(
+            RecruiterShortlist.recruiter_id == current_user.id,
+        )
+        if role:
+            normalized_role = _normalize_key(role).lower()
+            fallback_query = fallback_query.filter(func.lower(func.trim(RecruiterShortlist.role_title)) == normalized_role)
+        entries = fallback_query.order_by(RecruiterShortlist.created_at.desc()).all()
+        return [_serialize_shortlist(entry, include_skill_rows=False) for entry in entries]
 
 
 @router.post("", response_model=RecruiterShortlistResponse)
@@ -169,6 +194,7 @@ def upsert_shortlist(
     normalized_mode = _normalize_analysis_mode(request.analysis_mode)
     normalized_strengths = _coerce_list(request.top_strengths)
     normalized_gaps = _coerce_list(request.top_gaps)
+    include_skill_rows = _shortlist_skills_table_available(db)
 
     existing = db.query(RecruiterShortlist).filter(
         RecruiterShortlist.recruiter_id == current_user.id,
@@ -188,14 +214,15 @@ def upsert_shortlist(
         existing.top_strengths = normalized_strengths
         existing.top_gaps = normalized_gaps
         db.flush()
-        _replace_shortlist_skills(db, existing.id, normalized_strengths, normalized_gaps)
+        if include_skill_rows:
+            _replace_shortlist_skills(db, existing.id, normalized_strengths, normalized_gaps)
         try:
             db.commit()
         except Exception:
             db.rollback()
             raise HTTPException(status_code=500, detail="Failed to save shortlist")
         db.refresh(existing)
-        return _serialize_shortlist(existing)
+        return _serialize_shortlist(existing, include_skill_rows=include_skill_rows)
 
     entry = RecruiterShortlist(
         recruiter_id=current_user.id,
@@ -215,7 +242,8 @@ def upsert_shortlist(
     try:
         db.add(entry)
         db.flush()
-        _replace_shortlist_skills(db, entry.id, normalized_strengths, normalized_gaps)
+        if include_skill_rows:
+            _replace_shortlist_skills(db, entry.id, normalized_strengths, normalized_gaps)
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -237,19 +265,20 @@ def upsert_shortlist(
         existing.top_strengths = normalized_strengths
         existing.top_gaps = normalized_gaps
         db.flush()
-        _replace_shortlist_skills(db, existing.id, normalized_strengths, normalized_gaps)
+        if include_skill_rows:
+            _replace_shortlist_skills(db, existing.id, normalized_strengths, normalized_gaps)
         try:
             db.commit()
         except Exception:
             db.rollback()
             raise HTTPException(status_code=500, detail="Failed to save shortlist")
         db.refresh(existing)
-        return _serialize_shortlist(existing)
+        return _serialize_shortlist(existing, include_skill_rows=include_skill_rows)
     except Exception:
         db.rollback()
         raise HTTPException(status_code=500, detail="Failed to save shortlist")
     db.refresh(entry)
-    return _serialize_shortlist(entry)
+    return _serialize_shortlist(entry, include_skill_rows=include_skill_rows)
 
 
 @router.delete("/{shortlist_id}", status_code=204)
