@@ -5,14 +5,35 @@ const AuthContext = createContext();
 
 function resolveAuthApiBaseUrl() {
   const envUrl = (import.meta.env.VITE_API_URL || '').trim();
-  const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
-  // Use Vite proxy in local dev to avoid CORS and port drift entirely.
-  if (isLocalhost) {
+  if (typeof window === 'undefined') {
+    return envUrl || 'http://127.0.0.1:8012';
+  }
+
+  const hostname = window.location.hostname;
+  const port = window.location.port;
+  const protocol = window.location.protocol;
+
+  const isCapacitor = (hostname === 'localhost' && port === '') || protocol === 'capacitor:';
+  const isReactDevServer = (hostname === 'localhost' || hostname === '127.0.0.1') && port !== '';
+
+  if (isCapacitor) {
+    return envUrl || 'https://careerlens-api-imy1.onrender.com';
+  }
+
+  if (isReactDevServer) {
     return '/api';
   }
 
-  return envUrl || 'http://127.0.0.1:8012';
+  if (envUrl) {
+    return envUrl;
+  }
+
+  if (hostname.includes('careerlens.in') || hostname.includes('vercel.app')) {
+    return 'https://careerlens-api-imy1.onrender.com';
+  }
+
+  return 'http://127.0.0.1:8012';
 }
 
 // Auth Provider Component

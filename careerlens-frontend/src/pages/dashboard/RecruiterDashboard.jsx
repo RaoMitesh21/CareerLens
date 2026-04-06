@@ -52,8 +52,9 @@ function normalizeText(value = '') {
   return String(value).trim().toLowerCase();
 }
 
-function shortlistKey(roleTitle = '', candidateName = '') {
-  return `${normalizeText(roleTitle)}::${normalizeText(candidateName)}`;
+function shortlistKey(roleTitle = '', candidateName = '', analysisMode = 'esco') {
+  const mode = String(analysisMode || '').toLowerCase() === 'hybrid' ? 'hybrid' : 'esco';
+  return `${normalizeText(roleTitle)}::${normalizeText(candidateName)}::${mode}`;
 }
 
 function toTier(matchLabel = '') {
@@ -627,9 +628,10 @@ const RecruiterDashboard = () => {
 
   const findSavedShortlist = (candidate, roleTitleOverride) => {
     const roleTitle = roleTitleOverride || candidate?.role_title || jobTitle;
-    const key = shortlistKey(roleTitle, candidate?.candidate_name);
+    const mode = candidate?.analysis_mode || analysisMode;
+    const key = shortlistKey(roleTitle, candidate?.candidate_name, mode);
     return savedShortlists.find(
-      (entry) => shortlistKey(entry.role_title, entry.candidate_name) === key
+      (entry) => shortlistKey(entry.role_title, entry.candidate_name, entry.analysis_mode) === key
     );
   };
 
@@ -644,7 +646,8 @@ const RecruiterDashboard = () => {
       return;
     }
 
-    const key = shortlistKey(roleTitle, candidate.candidate_name);
+    const candidateMode = String(candidate.analysis_mode || analysisMode).toLowerCase() === 'hybrid' ? 'hybrid' : 'esco';
+    const key = shortlistKey(roleTitle, candidate.candidate_name, candidateMode);
     if (shortlistBusyKey === key) {
       return;
     }
@@ -671,7 +674,7 @@ const RecruiterDashboard = () => {
           secondary_match: candidate.secondary_match ?? null,
           bonus_match: candidate.bonus_match ?? null,
           match_label: candidate.match_label ?? null,
-          analysis_mode: String(candidate.analysis_mode || analysisMode).toLowerCase() === 'hybrid' ? 'hybrid' : 'esco',
+          analysis_mode: candidateMode,
           top_strengths: candidate.top_strengths || [],
           top_gaps: candidate.top_gaps || [],
         };
@@ -683,7 +686,7 @@ const RecruiterDashboard = () => {
 
         setSavedShortlists((prev) => {
           const filtered = prev.filter(
-            (entry) => shortlistKey(entry.role_title, entry.candidate_name) !== key
+            (entry) => shortlistKey(entry.role_title, entry.candidate_name, entry.analysis_mode) !== key
           );
           return [saved, ...filtered];
         });
@@ -1134,10 +1137,10 @@ const RecruiterDashboard = () => {
           ))}
         </div>
 
-        <div className="space-y-3 max-h-[600px] overflow-y-auto">
+        <div className="space-y-3 lg:max-h-[600px] lg:overflow-y-auto">
           {filteredCandidates.map((candidate, index) => {
             const shortlisted = Boolean(findSavedShortlist(candidate, jobTitle));
-            const busy = shortlistBusyKey === shortlistKey(jobTitle, candidate.candidate_name);
+            const busy = shortlistBusyKey === shortlistKey(jobTitle, candidate.candidate_name, candidate.analysis_mode || analysisMode);
 
             const decisionScore = toSafePercent(candidate.decision_score);
             const riskLevel = candidate.risk_level || 'N/A';
@@ -1155,8 +1158,8 @@ const RecruiterDashboard = () => {
                     : 'glass-card hover:!border-cyan-300'
                 }`}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex-1 min-w-0 w-full">
                     <div className="flex items-center gap-2">
                       <h4 className="font-bold text-lg text-slate-900 tracking-tight truncate">{candidate.candidate_name}</h4>
                       <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${tierClassMap[candidate.tier] || tierClassMap.review}`}>
@@ -1184,7 +1187,7 @@ const RecruiterDashboard = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="text-right ml-3">
+                  <div className="sm:text-right sm:ml-3 w-full sm:w-auto">
                     <div className="text-3xl font-extrabold text-slate-900 tracking-tighter">
                       {toSafePercent(candidate.overall_score).toFixed(1)}<span className="text-xl text-slate-400">%</span>
                     </div>
@@ -1194,7 +1197,7 @@ const RecruiterDashboard = () => {
                         await toggleShortlist(candidate, jobTitle);
                       }}
                       disabled={busy}
-                      className={`mt-2 text-xs px-3 py-1.5 rounded-lg font-bold transition-colors ${
+                      className={`mt-2 w-full sm:w-auto text-xs px-3 py-1.5 rounded-lg font-bold transition-colors ${
                         shortlisted
                           ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -1410,8 +1413,6 @@ const RecruiterDashboard = () => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           className="mb-8"
         >
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
@@ -1544,8 +1545,7 @@ const RecruiterDashboard = () => {
 
                     {diagnosticsResult && (
                       <div className="mt-3 space-y-2 text-xs">
-                        <div className="grid grid-cols-3 gap-2">
-                                                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                           <div className="p-2 rounded-lg bg-white border border-slate-200">
                             <p className="text-slate-500">ESCO</p>
                             <p className="font-bold text-slate-900">{toSafePercent(diagnosticsResult.esco_overall_score).toFixed(1)}%</p>
@@ -1573,7 +1573,7 @@ const RecruiterDashboard = () => {
                     )}
                   </div>
 
-                  <div className="mb-8 grid grid-cols-2 gap-3">
+                  <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
                       <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Coverage</p>
                       <p className="text-xl font-extrabold text-slate-900 mt-1">{toSafePercent(selectedCandidate.skill_coverage_ratio).toFixed(1)}%</p>
