@@ -87,14 +87,20 @@ async function authJsonFetch(url, options = {}) {
     ...(options.headers || {}),
   };
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  if (!token) {
+    throw new Error('Authentication required');
   }
+
+  headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(url, {
     ...options,
     headers,
   });
+
+  if (res.status === 401 && typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('careerlens:auth-expired'));
+  }
 
   return handleResponse(res);
 }
@@ -269,6 +275,25 @@ export async function saveDashboardState(scope, state) {
   return authJsonFetch(`${API_BASE}/dashboard-state/${encodeURIComponent(scope)}`, {
     method: 'PUT',
     body: JSON.stringify({ state }),
+  });
+}
+
+export async function listRecruiterAnalysisHistory(limit = 20) {
+  return authJsonFetch(`${API_BASE}/recruiter/analysis-history?limit=${encodeURIComponent(limit)}`, {
+    method: 'GET',
+  });
+}
+
+export async function saveRecruiterAnalysisHistory(payload) {
+  return authJsonFetch(`${API_BASE}/recruiter/analysis-history`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteRecruiterAnalysisHistory(analysisKey) {
+  return authJsonFetch(`${API_BASE}/recruiter/analysis-history/${encodeURIComponent(analysisKey)}`, {
+    method: 'DELETE',
   });
 }
 

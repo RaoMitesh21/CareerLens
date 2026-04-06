@@ -64,6 +64,7 @@ class User(Base):
     # Relationships
     resumes = relationship("Resume", back_populates="user", cascade="all, delete-orphan")
     recruiter_shortlists = relationship("RecruiterShortlist", back_populates="recruiter", cascade="all, delete-orphan")
+    recruiter_analysis_runs = relationship("RecruiterAnalysisRun", back_populates="recruiter", cascade="all, delete-orphan")
     dashboard_states = relationship("DashboardState", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
@@ -193,9 +194,123 @@ class RecruiterShortlist(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     recruiter = relationship("User", back_populates="recruiter_shortlists")
+    shortlist_skills = relationship("RecruiterShortlistSkill", back_populates="shortlist", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<RecruiterShortlist(id={self.id}, recruiter_id={self.recruiter_id}, role='{self.role_title}')>"
+
+
+class RecruiterShortlistSkill(Base):
+    """Normalized shortlist skill rows for strengths/gaps."""
+
+    __tablename__ = "recruiter_shortlist_skills"
+    __table_args__ = (
+        UniqueConstraint(
+            "shortlist_id",
+            "skill_type",
+            "skill_order",
+            name="uq_shortlist_skill_position",
+        ),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    shortlist_id = Column(BigInteger, ForeignKey("recruiter_shortlists.id"), nullable=False, index=True)
+    skill_type = Column(String(16), nullable=False, comment="strength | gap")
+    skill_order = Column(Integer, nullable=False, default=0)
+    skill_name = Column(String(255), nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+    shortlist = relationship("RecruiterShortlist", back_populates="shortlist_skills")
+
+    def __repr__(self) -> str:
+        return f"<RecruiterShortlistSkill(id={self.id}, shortlist_id={self.shortlist_id}, type='{self.skill_type}')>"
+
+
+class RecruiterAnalysisRun(Base):
+    """A persisted recruiter analysis session for one role and run key."""
+
+    __tablename__ = "recruiter_analysis_runs"
+    __table_args__ = (
+        UniqueConstraint("recruiter_id", "analysis_key", name="uq_recruiter_analysis_key"),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    recruiter_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, index=True)
+    analysis_key = Column(String(255), nullable=False)
+    role_title = Column(String(512), nullable=False, index=True)
+    analysis_mode = Column(String(16), nullable=False, default="esco")
+    total_candidates = Column(Integer, nullable=False, default=0)
+    shortlisted_count = Column(Integer, nullable=False, default=0)
+    average_score = Column(Float, nullable=False, default=0.0)
+    analyzed_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    recruiter = relationship("User", back_populates="recruiter_analysis_runs")
+    candidates = relationship("RecruiterAnalysisCandidate", back_populates="run", cascade="all, delete-orphan")
+
+    def __repr__(self) -> str:
+        return f"<RecruiterAnalysisRun(id={self.id}, recruiter_id={self.recruiter_id}, role='{self.role_title}')>"
+
+
+class RecruiterAnalysisCandidate(Base):
+    """A normalized candidate row for a recruiter analysis run."""
+
+    __tablename__ = "recruiter_analysis_candidates"
+    __table_args__ = (
+        UniqueConstraint("run_id", "rank", "candidate_name", name="uq_analysis_candidate_position"),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    run_id = Column(BigInteger, ForeignKey("recruiter_analysis_runs.id"), nullable=False, index=True)
+    rank = Column(Integer, nullable=True)
+    candidate_name = Column(String(255), nullable=False, index=True)
+    resume_filename = Column(String(255), nullable=True)
+    overall_score = Column(Float, nullable=False, default=0.0)
+    decision_score = Column(Float, nullable=True)
+    core_match = Column(Float, nullable=True)
+    secondary_match = Column(Float, nullable=True)
+    bonus_match = Column(Float, nullable=True)
+    match_label = Column(String(64), nullable=True)
+    risk_level = Column(String(32), nullable=True)
+    matched_count = Column(Integer, nullable=True)
+    missing_count = Column(Integer, nullable=True)
+    skill_coverage_ratio = Column(Float, nullable=True)
+    recommendation = Column(Text, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    run = relationship("RecruiterAnalysisRun", back_populates="candidates")
+    skills = relationship("RecruiterAnalysisCandidateSkill", back_populates="candidate", cascade="all, delete-orphan")
+
+    def __repr__(self) -> str:
+        return f"<RecruiterAnalysisCandidate(id={self.id}, run_id={self.run_id}, candidate='{self.candidate_name}')>"
+
+
+class RecruiterAnalysisCandidateSkill(Base):
+    """Normalized skill rows for a recruiter analysis candidate."""
+
+    __tablename__ = "recruiter_analysis_candidate_skills"
+    __table_args__ = (
+        UniqueConstraint(
+            "candidate_id",
+            "skill_type",
+            "skill_order",
+            name="uq_analysis_candidate_skill_position",
+        ),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    candidate_id = Column(BigInteger, ForeignKey("recruiter_analysis_candidates.id"), nullable=False, index=True)
+    skill_type = Column(String(16), nullable=False, comment="strength | gap")
+    skill_order = Column(Integer, nullable=False, default=0)
+    skill_name = Column(String(255), nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+    candidate = relationship("RecruiterAnalysisCandidate", back_populates="skills")
+
+    def __repr__(self) -> str:
+        return f"<RecruiterAnalysisCandidateSkill(id={self.id}, candidate_id={self.candidate_id}, type='{self.skill_type}')>"
 
 
 class OTPRecord(Base):

@@ -29,6 +29,7 @@ from app.routers.bot import router as bot_router
 from app.routers.contact import router as contact_router
 from app.routers.newsletter import router as newsletter_router
 from app.routers.recruiter_shortlist import router as recruiter_shortlist_router
+from app.routers.recruiter_analysis import router as recruiter_analysis_router
 from app.routers.dashboard_state import router as dashboard_state_router
 from app.routers.ml_fit import router as ml_fit_router
 
@@ -89,6 +90,7 @@ app.include_router(bot_router)
 app.include_router(contact_router)
 app.include_router(newsletter_router)
 app.include_router(recruiter_shortlist_router)
+app.include_router(recruiter_analysis_router)
 app.include_router(dashboard_state_router)
 app.include_router(ml_fit_router)
 

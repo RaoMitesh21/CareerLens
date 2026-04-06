@@ -7,6 +7,7 @@ without requiring Alembic in this prototype stage.
 
 from __future__ import annotations
 
+import json
 from typing import Callable
 
 from sqlalchemy import inspect, text
@@ -653,6 +654,231 @@ def _migration_20260328_008_enforce_shortlist_consistency(conn: Connection) -> N
     )
 
 
+def _normalize_string_list(value) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, tuple):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str):
+        text_value = value.strip()
+        if not text_value or text_value in {"None", "NULL"}:
+            return []
+        try:
+            parsed = json.loads(text_value)
+        except json.JSONDecodeError:
+            parsed = None
+        if isinstance(parsed, list):
+            return [str(item).strip() for item in parsed if str(item).strip()]
+        return [item.strip() for item in text_value.split(";") if item.strip()]
+    return [str(value).strip()] if str(value).strip() else []
+
+
+def _migration_20260406_009_backfill_recruiter_normalized_tables(conn: Connection) -> None:
+    inspector = inspect(conn)
+    if not inspector.has_table("recruiter_shortlists"):
+        return
+
+    # Backfill shortlist skill rows from legacy JSON arrays.
+    if inspector.has_table("recruiter_shortlist_skills"):
+        shortlist_rows = conn.execute(
+            text("SELECT id, top_strengths, top_gaps FROM recruiter_shortlists")
+        ).mappings().all()
+        for row in shortlist_rows:
+            shortlist_id = row["id"]
+            existing_count = conn.execute(
+                text("SELECT 1 FROM recruiter_shortlist_skills WHERE shortlist_id = :shortlist_id LIMIT 1"),
+                {"shortlist_id": shortlist_id},
+            ).first()
+            if existing_count:
+                continue
+
+            for skill_type, values in (("strength", _normalize_string_list(row["top_strengths"])), ("gap", _normalize_string_list(row["top_gaps"]))):
+                for index, skill_name in enumerate(values):
+                    conn.execute(
+                        text(
+                            """
+                            INSERT INTO recruiter_shortlist_skills (shortlist_id, skill_type, skill_order, skill_name)
+                            VALUES (:shortlist_id, :skill_type, :skill_order, :skill_name)
+                            """
+                        ),
+                        {
+                            "shortlist_id": shortlist_id,
+                            "skill_type": skill_type,
+                            "skill_order": index,
+                            "skill_name": skill_name,
+                        },
+                    )
+
+    # Backfill recruiter analysis runs from dashboard state snapshots.
+    if not inspector.has_table("dashboard_states") or not inspector.has_table("recruiter_analysis_runs"):
+        return
+
+    dashboard_rows = conn.execute(
+        text("SELECT user_id, state, updated_at FROM dashboard_states WHERE scope = 'recruiter'")
+    ).mappings().all()
+
+    for row in dashboard_rows:
+        state_value = row["state"]
+        if isinstance(state_value, str):
+            try:
+                state = json.loads(state_value)
+            except json.JSONDecodeError:
+                state = {}
+        else:
+            state = state_value or {}
+
+        if not isinstance(state, dict):
+            continue
+
+        history = state.get("analysisHistory") or []
+        if not history and state.get("analysisResults"):
+            history = [{
+                "id": state.get("savedAt") or state.get("analysisKey") or f"legacy-{row['user_id']}",
+                "jobTitle": state.get("jobTitle") or "Unspecified role",
+                "analysisMode": state.get("analysisMode") or "esco",
+                "analyzedAtIso": None,
+                "analyzedAt": state.get("savedAt") or None,
+                "totalCandidates": len(state.get("analysisResults") or []),
+                "shortlistedCount": len(state.get("savedShortlists") or []),
+                "averageScore": state.get("analysisResults") and round(sum(float(candidate.get("overall_score") or 0) for candidate in state.get("analysisResults") or []) / max(len(state.get("analysisResults") or []), 1), 1) or 0,
+                "topCandidates": state.get("analysisResults") or [],
+                "shortlistedCandidates": state.get("savedShortlists") or [],
+            }]
+
+        for report in history:
+            if not isinstance(report, dict):
+                continue
+
+            analysis_key = str(report.get("id") or report.get("analysisKey") or report.get("savedAt") or report.get("analyzedAt") or f"legacy-{row['user_id']}-{report.get('jobTitle')}-{report.get('analysisMode')}").strip()
+            if not analysis_key:
+                continue
+
+            exists = conn.execute(
+                text(
+                    "SELECT 1 FROM recruiter_analysis_runs WHERE recruiter_id = :recruiter_id AND analysis_key = :analysis_key LIMIT 1"
+                ),
+                {"recruiter_id": row["user_id"], "analysis_key": analysis_key},
+            ).first()
+            if exists:
+                continue
+
+            analyzed_at = report.get("analyzedAtIso") or report.get("analyzedAt") or row["updated_at"]
+            if isinstance(analyzed_at, str) and analyzed_at.endswith("Z"):
+                analyzed_at = analyzed_at.replace("Z", "+00:00")
+
+            candidate_rows = report.get("topCandidates") or report.get("candidates") or []
+            shortlisted_rows = report.get("shortlistedCandidates") or []
+            shortlisted_count = report.get("shortlistedCount")
+            if shortlisted_count is None:
+                shortlisted_count = len(shortlisted_rows)
+
+            total_candidates = report.get("totalCandidates")
+            if total_candidates is None:
+                total_candidates = len(candidate_rows)
+
+            average_score = report.get("averageScore")
+            if average_score is None and candidate_rows:
+                average_score = round(
+                    sum(float(candidate.get("overall_score") or candidate.get("decision_score") or 0) for candidate in candidate_rows)
+                    / max(len(candidate_rows), 1),
+                    1,
+                )
+            average_score = float(average_score or 0)
+
+            conn.execute(
+                text(
+                    """
+                    INSERT INTO recruiter_analysis_runs
+                        (recruiter_id, analysis_key, role_title, analysis_mode, total_candidates, shortlisted_count, average_score, analyzed_at)
+                    VALUES
+                        (:recruiter_id, :analysis_key, :role_title, :analysis_mode, :total_candidates, :shortlisted_count, :average_score, :analyzed_at)
+                    """
+                ),
+                {
+                    "recruiter_id": row["user_id"],
+                    "analysis_key": analysis_key,
+                    "role_title": str(report.get("jobTitle") or "Unspecified role").strip(),
+                    "analysis_mode": _normalize_string_list([report.get("analysisMode") or "esco"])[0] if report.get("analysisMode") else "esco",
+                    "total_candidates": int(total_candidates or 0),
+                    "shortlisted_count": int(shortlisted_count or 0),
+                    "average_score": average_score,
+                    "analyzed_at": analyzed_at,
+                },
+            )
+
+            run_id_row = conn.execute(
+                text(
+                    "SELECT id FROM recruiter_analysis_runs WHERE recruiter_id = :recruiter_id AND analysis_key = :analysis_key LIMIT 1"
+                ),
+                {"recruiter_id": row["user_id"], "analysis_key": analysis_key},
+            ).first()
+            if not run_id_row:
+                continue
+            run_id = run_id_row[0]
+
+            for candidate_index, candidate in enumerate(candidate_rows):
+                if not isinstance(candidate, dict):
+                    continue
+
+                candidate_name = str(candidate.get("candidate_name") or candidate.get("name") or f"Candidate {candidate_index + 1}").strip()
+                conn.execute(
+                    text(
+                        """
+                        INSERT INTO recruiter_analysis_candidates
+                            (run_id, rank, candidate_name, resume_filename, overall_score, decision_score, core_match, secondary_match, bonus_match, match_label, risk_level, matched_count, missing_count, skill_coverage_ratio, recommendation)
+                        VALUES
+                            (:run_id, :rank, :candidate_name, :resume_filename, :overall_score, :decision_score, :core_match, :secondary_match, :bonus_match, :match_label, :risk_level, :matched_count, :missing_count, :skill_coverage_ratio, :recommendation)
+                        """
+                    ),
+                    {
+                        "run_id": run_id,
+                        "rank": candidate.get("rank"),
+                        "candidate_name": candidate_name,
+                        "resume_filename": candidate.get("resume_filename") or candidate.get("filename"),
+                        "overall_score": float(candidate.get("overall_score") or 0),
+                        "decision_score": candidate.get("decision_score"),
+                        "core_match": candidate.get("core_match"),
+                        "secondary_match": candidate.get("secondary_match"),
+                        "bonus_match": candidate.get("bonus_match"),
+                        "match_label": candidate.get("match_label"),
+                        "risk_level": candidate.get("risk_level"),
+                        "matched_count": candidate.get("matched_count"),
+                        "missing_count": candidate.get("missing_count"),
+                        "skill_coverage_ratio": candidate.get("skill_coverage_ratio"),
+                        "recommendation": candidate.get("recommendation"),
+                    },
+                )
+
+                candidate_id_row = conn.execute(
+                    text(
+                        "SELECT id FROM recruiter_analysis_candidates WHERE run_id = :run_id AND candidate_name = :candidate_name ORDER BY id DESC LIMIT 1"
+                    ),
+                    {"run_id": run_id, "candidate_name": candidate_name},
+                ).first()
+                if not candidate_id_row:
+                    continue
+                candidate_id = candidate_id_row[0]
+
+                for skill_type, skill_values in (("strength", _normalize_string_list(candidate.get("top_strengths") or candidate.get("strengths"))), ("gap", _normalize_string_list(candidate.get("top_gaps") or candidate.get("gaps")))):
+                    for skill_order, skill_name in enumerate(skill_values):
+                        conn.execute(
+                            text(
+                                """
+                                INSERT INTO recruiter_analysis_candidate_skills (candidate_id, skill_type, skill_order, skill_name)
+                                VALUES (:candidate_id, :skill_type, :skill_order, :skill_name)
+                                """
+                            ),
+                            {
+                                "candidate_id": candidate_id,
+                                "skill_type": skill_type,
+                                "skill_order": skill_order,
+                                "skill_name": skill_name,
+                            },
+                        )
+
+
 MIGRATIONS: list[tuple[str, MigrationFn]] = [
     ("20260324_001_add_shortlist_analysis_mode", _migration_20260324_001_add_shortlist_analysis_mode),
     ("20260328_002_fix_turso_autoincrement_ids", _migration_20260328_002_fix_turso_autoincrement_ids),
@@ -662,6 +888,7 @@ MIGRATIONS: list[tuple[str, MigrationFn]] = [
     ("20260328_006_normalize_shortlist_json_fields", _migration_20260328_006_normalize_shortlist_json_fields),
     ("20260328_007_normalize_dashboard_state_json", _migration_20260328_007_normalize_dashboard_state_json),
     ("20260328_008_enforce_shortlist_consistency", _migration_20260328_008_enforce_shortlist_consistency),
+    ("20260406_009_backfill_recruiter_normalized_tables", _migration_20260406_009_backfill_recruiter_normalized_tables),
 ]
 
 

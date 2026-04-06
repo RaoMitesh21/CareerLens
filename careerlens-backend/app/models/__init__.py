@@ -9,6 +9,10 @@ from app.models.user import (
     Roadmap,
     OTPRecord,
     RecruiterShortlist,
+    RecruiterShortlistSkill,
+    RecruiterAnalysisRun,
+    RecruiterAnalysisCandidate,
+    RecruiterAnalysisCandidateSkill,
     DashboardState,
     UserRole,
 )
@@ -28,5 +32,9 @@ __all__ = [
     "Roadmap",
     "OTPRecord",
     "RecruiterShortlist",
+    "RecruiterShortlistSkill",
+    "RecruiterAnalysisRun",
+    "RecruiterAnalysisCandidate",
+    "RecruiterAnalysisCandidateSkill",
     "DashboardState",
 ]

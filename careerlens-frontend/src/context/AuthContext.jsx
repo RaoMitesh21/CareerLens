@@ -71,6 +71,15 @@ export const AuthProvider = ({ children }) => {
     setIsInitializing(false);
   }, []);
 
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      clearAuth();
+    };
+
+    window.addEventListener('careerlens:auth-expired', handleAuthExpired);
+    return () => window.removeEventListener('careerlens:auth-expired', handleAuthExpired);
+  }, []);
+
   // API call helper with auth
   const apiCall = async (endpoint, options = {}) => {
     const headers = {

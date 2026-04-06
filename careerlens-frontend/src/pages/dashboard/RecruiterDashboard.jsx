@@ -28,8 +28,11 @@ import Logo from '../../components/Logo';
 import {
   analyzeHybridDiagnostics,
   batchAnalyzeResumes,
+  deleteRecruiterAnalysisHistory,
   getDashboardState,
+  listRecruiterAnalysisHistory,
   parseFileToText,
+  saveRecruiterAnalysisHistory,
   saveDashboardState,
   searchOccupations,
 } from '../../services/api';
@@ -88,6 +91,115 @@ function uniqueNormalized(values = []) {
     output.push(item);
   });
   return output;
+}
+
+function isNonEmptyValue(value) {
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  if (value && typeof value === 'object') {
+    return Object.keys(value).length > 0;
+  }
+  return value !== null && value !== undefined && String(value).trim() !== '';
+}
+
+function mergeDashboardSnapshots(remoteState = {}, localState = {}) {
+  const remoteSavedAt = Number(remoteState?.savedAt || 0);
+  const localSavedAt = Number(localState?.savedAt || 0);
+  const primaryState = localSavedAt >= remoteSavedAt ? localState : remoteState;
+  const fallbackState = primaryState === localState ? remoteState : localState;
+
+  const merged = {
+    ...fallbackState,
+    ...primaryState,
+  };
+
+  [
+    'activeMenu',
+    'jobTitle',
+    'analysisMode',
+    'analysisResults',
+    'filterTier',
+    'savedShortlists',
+    'selectedCandidate',
+    'sidebarOpen',
+  ].forEach((key) => {
+    if (!isNonEmptyValue(merged[key]) && isNonEmptyValue(remoteState[key])) {
+      merged[key] = remoteState[key];
+    }
+    if (!isNonEmptyValue(merged[key]) && isNonEmptyValue(localState[key])) {
+      merged[key] = localState[key];
+    }
+  });
+
+  return merged;
+}
+
+function analysisRunToReportSnapshot(run = {}) {
+  const analyzedAtIso = run.analyzed_at || run.created_at || new Date().toISOString();
+  const topCandidates = Array.isArray(run.candidates)
+    ? run.candidates.map((candidate) => ({
+        id: candidate.id,
+        rank: candidate.rank,
+        candidate_name: candidate.candidate_name,
+        analysis_mode: run.analysis_mode,
+        overall_score: candidate.overall_score,
+        decision_score: candidate.decision_score,
+        match_label: candidate.match_label,
+        risk_level: candidate.risk_level,
+        core_match: candidate.core_match,
+        secondary_match: candidate.secondary_match,
+        bonus_match: candidate.bonus_match,
+        matched_count: candidate.matched_count,
+        missing_count: candidate.missing_count,
+        skill_coverage_ratio: candidate.skill_coverage_ratio,
+        top_strengths: (candidate.strengths || []).map((skill) => skill.skill_name),
+        top_gaps: (candidate.gaps || []).map((skill) => skill.skill_name),
+      }))
+    : [];
+
+  return {
+    id: run.analysis_key,
+    jobTitle: run.role_title,
+    analysisMode: run.analysis_mode,
+    analyzedAt: Date.parse(analyzedAtIso) || Date.now(),
+    analyzedAtIso,
+    totalCandidates: run.total_candidates || topCandidates.length,
+    shortlistedCount: run.shortlisted_count || 0,
+    averageScore: Number(run.average_score || 0),
+    topCandidates,
+    shortlistedCandidates: [],
+  };
+}
+
+function buildAnalysisHistoryPayload({ reportSnapshot, candidates = [] }) {
+  return {
+    analysis_key: reportSnapshot.id,
+    role_title: reportSnapshot.jobTitle,
+    analysis_mode: reportSnapshot.analysisMode,
+    analyzed_at: reportSnapshot.analyzedAtIso,
+    total_candidates: reportSnapshot.totalCandidates,
+    shortlisted_count: reportSnapshot.shortlistedCount,
+    average_score: reportSnapshot.averageScore,
+    candidates: candidates.map((candidate) => ({
+      rank: candidate.rank ?? null,
+      candidate_name: candidate.candidate_name,
+      resume_filename: candidate.resume_filename ?? null,
+      overall_score: candidate.overall_score ?? 0,
+      decision_score: candidate.decision_score ?? null,
+      core_match: candidate.core_match ?? null,
+      secondary_match: candidate.secondary_match ?? null,
+      bonus_match: candidate.bonus_match ?? null,
+      match_label: candidate.match_label ?? null,
+      risk_level: candidate.risk_level ?? null,
+      matched_count: candidate.matched_count ?? null,
+      missing_count: candidate.missing_count ?? null,
+      skill_coverage_ratio: candidate.skill_coverage_ratio ?? null,
+      recommendation: candidate.recommendation ?? null,
+      strengths: candidate.top_strengths || [],
+      gaps: candidate.top_gaps || [],
+    })),
+  };
 }
 
 function getComprehensiveClassification(candidate) {
@@ -281,7 +393,7 @@ async function parseCandidateCsv(file) {
 }
 
 const RecruiterDashboard = () => {
-  const { user, logout, apiCall } = useAuth();
+  const { user, token, logout, apiCall } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const suggestionsRef = useRef(null);
@@ -300,6 +412,8 @@ const RecruiterDashboard = () => {
   const [filterTier, setFilterTier] = useState('all');
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [savedShortlists, setSavedShortlists] = useState([]);
+  const [analysisHistory, setAnalysisHistory] = useState([]);
+  const [selectedAnalysisRun, setSelectedAnalysisRun] = useState(null);
   const [isLoadingShortlists, setIsLoadingShortlists] = useState(false);
   const [shortlistBusyKey, setShortlistBusyKey] = useState('');
   const [diagnosticsBusy, setDiagnosticsBusy] = useState(false);
@@ -336,83 +450,76 @@ const RecruiterDashboard = () => {
   }, []);
 
   useEffect(() => {
-    if (!user?.id) {
+    if (!user?.id || !token) {
       return;
     }
 
     let cancelled = false;
 
     const hydrate = async () => {
-      let hasRemoteState = false;
+      let remoteState = {};
+      let localState = {};
 
       try {
         const remote = await getDashboardState('recruiter');
-        const saved = remote?.state || {};
-
-        if (saved && Object.keys(saved).length > 0) {
-          hasRemoteState = true;
-          if (typeof saved.activeMenu === 'string') {
-            setActiveMenu(saved.activeMenu);
-          }
-          if (typeof saved.jobTitle === 'string') {
-            setJobTitle(saved.jobTitle);
-          }
-          if (typeof saved.analysisMode === 'string') {
-            setAnalysisMode(saved.analysisMode === 'hybrid' ? 'hybrid' : 'esco');
-          }
-          if (Array.isArray(saved.analysisResults)) {
-            setAnalysisResults(saved.analysisResults);
-          }
-          if (typeof saved.filterTier === 'string') {
-            setFilterTier(saved.filterTier);
-          }
-          if (Array.isArray(saved.savedShortlists)) {
-            setSavedShortlists(saved.savedShortlists);
-          }
-          if (saved.selectedCandidate && typeof saved.selectedCandidate === 'object') {
-            setSelectedCandidate(saved.selectedCandidate);
-          }
-          if (typeof saved.sidebarOpen === 'boolean') {
-            setSidebarOpen(saved.sidebarOpen);
-          }
-        }
+        remoteState = remote?.state || {};
       } catch {
-        // Ignore backend hydration failures and try local fallback.
+        // Ignore backend hydration failures and continue with local fallback.
       }
 
-      if (!hasRemoteState) {
-        try {
-          const raw = localStorage.getItem(RECRUITER_DASHBOARD_STORAGE_KEY);
-          if (raw) {
-            const saved = JSON.parse(raw);
-            if (typeof saved.activeMenu === 'string') {
-              setActiveMenu(saved.activeMenu);
-            }
-            if (typeof saved.jobTitle === 'string') {
-              setJobTitle(saved.jobTitle);
-            }
-            if (typeof saved.analysisMode === 'string') {
-              setAnalysisMode(saved.analysisMode === 'hybrid' ? 'hybrid' : 'esco');
-            }
-            if (Array.isArray(saved.analysisResults)) {
-              setAnalysisResults(saved.analysisResults);
-            }
-            if (typeof saved.filterTier === 'string') {
-              setFilterTier(saved.filterTier);
-            }
-            if (Array.isArray(saved.savedShortlists)) {
-              setSavedShortlists(saved.savedShortlists);
-            }
-            if (saved.selectedCandidate && typeof saved.selectedCandidate === 'object') {
-              setSelectedCandidate(saved.selectedCandidate);
-            }
-            if (typeof saved.sidebarOpen === 'boolean') {
-              setSidebarOpen(saved.sidebarOpen);
-            }
-          }
-        } catch {
-          // Ignore malformed local persisted dashboard state.
+      try {
+        const raw = localStorage.getItem(RECRUITER_DASHBOARD_STORAGE_KEY);
+        if (raw) {
+          localState = JSON.parse(raw) || {};
         }
+      } catch {
+        // Ignore malformed local persisted dashboard state.
+      }
+
+      const saved = mergeDashboardSnapshots(remoteState, localState);
+
+      if (typeof saved.activeMenu === 'string') {
+        setActiveMenu(saved.activeMenu);
+      }
+      if (typeof saved.jobTitle === 'string') {
+        setJobTitle(saved.jobTitle);
+      }
+      if (typeof saved.analysisMode === 'string') {
+        setAnalysisMode(saved.analysisMode === 'hybrid' ? 'hybrid' : 'esco');
+      }
+      if (Array.isArray(saved.analysisResults)) {
+        setAnalysisResults(saved.analysisResults);
+      }
+      if (typeof saved.filterTier === 'string') {
+        setFilterTier(saved.filterTier);
+      }
+      if (Array.isArray(saved.savedShortlists)) {
+        setSavedShortlists(saved.savedShortlists);
+      }
+      if (saved.selectedCandidate && typeof saved.selectedCandidate === 'object') {
+        setSelectedCandidate(saved.selectedCandidate);
+      }
+      if (typeof saved.sidebarOpen === 'boolean') {
+        setSidebarOpen(saved.sidebarOpen);
+      }
+
+      try {
+        const remoteHistory = await listRecruiterAnalysisHistory(20);
+        const normalizedHistory = Array.isArray(remoteHistory)
+          ? remoteHistory.map(analysisRunToReportSnapshot)
+          : [];
+        const sortedHistory = normalizedHistory.sort((a, b) => Number(b.analyzedAt || 0) - Number(a.analyzedAt || 0));
+
+        setAnalysisHistory(sortedHistory);
+        setSelectedAnalysisRun((currentSelected) => {
+          if (currentSelected?.id && sortedHistory.some((run) => run.id === currentSelected.id)) {
+            return currentSelected;
+          }
+          return sortedHistory[0] || null;
+        });
+      } catch {
+        setAnalysisHistory([]);
+        setSelectedAnalysisRun(null);
       }
 
       if (!cancelled) {
@@ -425,10 +532,10 @@ const RecruiterDashboard = () => {
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [user?.id, token]);
 
   useEffect(() => {
-    if (!isStateHydrated || !user?.id) {
+    if (!isStateHydrated || !user?.id || !token) {
       return;
     }
 
@@ -461,6 +568,7 @@ const RecruiterDashboard = () => {
   }, [
     isStateHydrated,
     user?.id,
+    token,
     activeMenu,
     jobTitle,
     analysisMode,
@@ -472,7 +580,7 @@ const RecruiterDashboard = () => {
   ]);
 
   useEffect(() => {
-    if (!user?.id) {
+    if (!user?.id || !token) {
       return;
     }
 
@@ -486,7 +594,7 @@ const RecruiterDashboard = () => {
           setSavedShortlists(Array.isArray(rows) ? rows : []);
         }
       } catch (err) {
-        if (active) {
+        if (active && !String(err?.message || '').toLowerCase().includes('authentication')) {
           setError(err.message || 'Could not load saved shortlists.');
         }
       } finally {
@@ -501,7 +609,7 @@ const RecruiterDashboard = () => {
     return () => {
       active = false;
     };
-  }, [user?.id]);
+  }, [user?.id, token]);
 
   useEffect(() => {
     if (!analysisResults.length) {
@@ -778,10 +886,33 @@ const RecruiterDashboard = () => {
       );
 
       const normalized = rankBatchCandidates(chunkResults, analysisMode);
-
       setAnalysisResults(normalized);
       setSelectedCandidate(normalized[0] || null);
       setActiveMenu('analytics');
+
+      const archivedShortlists = savedShortlists.filter(
+        (candidate) => normalizeText(candidate.role_title) === normalizeText(jobTitle.trim())
+      );
+      const analysisRecord = {
+        id: `${Date.now()}-${normalizeText(jobTitle.trim())}-${normalizeText(analysisMode)}`,
+        jobTitle: jobTitle.trim(),
+        analysisMode,
+        analyzedAt: Date.now(),
+        analyzedAtIso: new Date().toISOString(),
+        totalCandidates: normalized.length,
+        shortlistedCount: archivedShortlists.length,
+        averageScore: normalized.length
+          ? Number((normalized.reduce((sum, candidate) => sum + Number(candidate.overall_score || 0), 0) / normalized.length).toFixed(1))
+          : 0,
+      };
+
+      await saveRecruiterAnalysisHistory(buildAnalysisHistoryPayload({ reportSnapshot: analysisRecord, candidates: normalized }));
+      const refreshedHistory = await listRecruiterAnalysisHistory(20);
+      const savedRuns = (Array.isArray(refreshedHistory) ? refreshedHistory.map(analysisRunToReportSnapshot) : []).sort(
+        (a, b) => Number(b.analyzedAt || 0) - Number(a.analyzedAt || 0)
+      );
+      setAnalysisHistory(savedRuns);
+      setSelectedAnalysisRun(savedRuns[0] || null);
 
       if (normalized.length === 0) {
         setError('No candidates could be analyzed. Try different resumes.');
@@ -817,7 +948,6 @@ const RecruiterDashboard = () => {
     ? (allCandidates.reduce((sum, candidate) => sum + candidate.overall_score, 0) / allCandidates.length).toFixed(1)
     : '0.0';
   const topTierCount = allCandidates.filter((candidate) => candidate.tier === 'top').length;
-
   const selectedCandidateDetails = useMemo(() => {
     if (!selectedCandidate) {
       return null;
@@ -901,6 +1031,76 @@ const RecruiterDashboard = () => {
       setTimeout(() => setReportCopied(false), 1600);
     } catch {
       setError('Could not copy report summary to clipboard.');
+    }
+  };
+
+  const exportAnalysisHistoryCsv = () => {
+    if (!analysisHistory.length) {
+      setError('No saved analysis history found.');
+      return;
+    }
+
+    const rows = analysisHistory.map((report) => ({
+      ReportDate: report.analyzedAtIso || new Date(report.analyzedAt || Date.now()).toISOString(),
+      Role: report.jobTitle,
+      Mode: String(report.analysisMode || 'esco').toUpperCase(),
+      TotalCandidates: report.totalCandidates,
+      ShortlistedCount: report.shortlistedCount,
+      AverageScore: report.averageScore,
+      TopCandidate: report.topCandidates?.[0]?.candidate_name || '',
+      TopCandidateScore: report.topCandidates?.[0]?.overall_score || '',
+    }));
+
+    downloadCsv(rows, `recruiter-analysis-history-${Date.now()}.csv`);
+  };
+
+  const exportArchiveRunCsv = (report) => {
+    if (!report?.topCandidates?.length) {
+      setError('No saved run details available for CSV export.');
+      return;
+    }
+
+    const rows = report.topCandidates.map((candidate) => ({
+      ReportDate: report.analyzedAtIso || new Date(report.analyzedAt || Date.now()).toISOString(),
+      Role: report.jobTitle,
+      Mode: String(report.analysisMode || 'esco').toUpperCase(),
+      Rank: candidate.rank,
+      Candidate: candidate.candidate_name,
+      Score: candidate.overall_score,
+      DecisionScore: candidate.decision_score,
+      Match: candidate.match_label,
+      Risk: candidate.risk_level,
+      Core: candidate.core_match,
+      Secondary: candidate.secondary_match,
+      Bonus: candidate.bonus_match,
+      Strengths: (candidate.top_strengths || []).join('; '),
+      Gaps: (candidate.top_gaps || []).join('; '),
+    }));
+
+    downloadCsv(rows, `recruiter-analysis-${normalizeText(report.jobTitle || 'report')}-${Date.now()}.csv`);
+  };
+
+  const deleteArchiveRun = async (report) => {
+    if (!report?.id) return;
+
+    const confirmed = window.confirm(`Delete saved analysis for ${report.jobTitle}? This cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      await deleteRecruiterAnalysisHistory(report.id);
+      const remaining = analysisHistory.filter((item) => item.id !== report.id);
+      setAnalysisHistory(remaining);
+      setSelectedAnalysisRun((currentSelected) => {
+        if (currentSelected?.id === report.id) {
+          return remaining[0] || null;
+        }
+        if (currentSelected && remaining.some((item) => item.id === currentSelected.id)) {
+          return currentSelected;
+        }
+        return remaining[0] || null;
+      });
+    } catch (err) {
+      setError(err.message || 'Failed to delete saved analysis.');
     }
   };
 
@@ -1301,7 +1501,7 @@ const RecruiterDashboard = () => {
   };
 
   const renderReports = () => {
-    if (!allCandidates.length) {
+    if (!allCandidates.length && !analysisHistory.length) {
       return (
         <div className="text-center py-14">
           <Download className="mx-auto text-slate-300" size={40} />
@@ -1311,8 +1511,44 @@ const RecruiterDashboard = () => {
       );
     }
 
+    const activeArchiveRun = selectedAnalysisRun || analysisHistory[0] || null;
+    const summaryCandidateCount = activeArchiveRun?.totalCandidates ?? allCandidates.length;
+    const summaryAverageScore = activeArchiveRun ? Number(activeArchiveRun.averageScore || 0).toFixed(1) : averageScore;
+
     return (
       <div className="space-y-5">
+        <div className="p-4 rounded-2xl border border-cyan-100 bg-cyan-50/60">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-xs uppercase tracking-wider text-cyan-700 font-semibold">Saved Analysis History</p>
+              <p className="text-sm text-cyan-900/80 mt-1">Each analysis run is saved with date, role, mode, candidate summary, and shortlist snapshot.</p>
+            </div>
+            <button
+              onClick={exportAnalysisHistoryCsv}
+              disabled={!analysisHistory.length}
+              className="px-4 py-2 rounded-xl bg-cyan-600 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Export History CSV
+            </button>
+          </div>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3 rounded-xl bg-white border border-cyan-100">
+              <p className="text-[11px] uppercase tracking-wider text-slate-500">Runs Saved</p>
+              <p className="text-xl font-bold text-slate-900 mt-1">{analysisHistory.length}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-white border border-cyan-100">
+              <p className="text-[11px] uppercase tracking-wider text-slate-500">Latest Run</p>
+              <p className="text-sm font-semibold text-slate-900 mt-1 truncate">
+                {analysisHistory[0]?.analyzedAtIso ? new Date(analysisHistory[0].analyzedAtIso).toLocaleString() : 'No saved run'}
+              </p>
+            </div>
+            <div className="p-3 rounded-xl bg-white border border-cyan-100">
+              <p className="text-[11px] uppercase tracking-wider text-slate-500">Current Shortlisted</p>
+              <p className="text-xl font-bold text-slate-900 mt-1">{shortlistedCandidates.length}</p>
+            </div>
+          </div>
+        </div>
+
         <div className="grid md:grid-cols-3 gap-4">
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
             <p className="text-xs uppercase tracking-wider text-slate-500">Role</p>
@@ -1320,11 +1556,11 @@ const RecruiterDashboard = () => {
           </div>
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
             <p className="text-xs uppercase tracking-wider text-slate-500">Candidates</p>
-            <p className="text-lg font-bold text-slate-900 mt-1">{allCandidates.length}</p>
+            <p className="text-lg font-bold text-slate-900 mt-1">{summaryCandidateCount}</p>
           </div>
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
             <p className="text-xs uppercase tracking-wider text-slate-500">Average Score</p>
-            <p className="text-lg font-bold text-slate-900 mt-1">{averageScore}%</p>
+            <p className="text-lg font-bold text-slate-900 mt-1">{summaryAverageScore}%</p>
           </div>
         </div>
 
@@ -1358,6 +1594,149 @@ const RecruiterDashboard = () => {
             {reportCopied ? 'Summary Copied' : 'Copy Summary'}
           </button>
         </div>
+
+        <div className="grid lg:grid-cols-[280px_minmax(0,1fr)] gap-4 items-start">
+          <div className="space-y-3 max-h-[580px] overflow-y-auto pr-1">
+            {analysisHistory.map((report) => {
+              const isActive = activeArchiveRun?.id === report.id;
+
+              return (
+                <div
+                  key={report.id}
+                  className={`rounded-2xl border p-4 transition-all ${isActive ? 'border-cyan-400 bg-cyan-50 shadow-sm' : 'border-slate-200 bg-white hover:border-cyan-200'}`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAnalysisRun(report)}
+                    className="w-full text-left"
+                  >
+                    <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold">
+                      {new Date(report.analyzedAtIso || report.analyzedAt || Date.now()).toLocaleString()}
+                    </p>
+                    <p className="text-base font-bold text-slate-900 mt-1 truncate">{report.jobTitle}</p>
+                    <p className="text-sm text-slate-600 mt-1">
+                      {String(report.analysisMode || 'esco').toUpperCase()} • {report.totalCandidates} candidates • {report.shortlistedCount} shortlisted
+                    </p>
+                    <p className="text-sm text-slate-700 mt-2">Avg {Number(report.averageScore || 0).toFixed(1)}%</p>
+                  </button>
+                  <div className="mt-3 flex gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedAnalysisRun(report)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    >
+                      View Detail
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => exportArchiveRunCsv(report)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-50 text-cyan-700 hover:bg-cyan-100"
+                    >
+                      CSV
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteArchiveRun(report)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="space-y-4">
+            {activeArchiveRun ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl border border-slate-200 bg-white">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Selected Archive Detail</p>
+                      <h3 className="text-2xl font-bold text-slate-900 mt-1">{activeArchiveRun.jobTitle}</h3>
+                      <p className="text-sm text-slate-600 mt-2">
+                        {new Date(activeArchiveRun.analyzedAtIso || activeArchiveRun.analyzedAt || Date.now()).toLocaleString()} • {String(activeArchiveRun.analysisMode || 'esco').toUpperCase()}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => exportArchiveRunCsv(activeArchiveRun)}
+                        className="px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-black"
+                      >
+                        Export CSV
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteArchiveRun(activeArchiveRun)}
+                        className="px-4 py-2 rounded-xl bg-rose-50 text-rose-700 text-sm font-semibold hover:bg-rose-100"
+                      >
+                        Delete Run
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid sm:grid-cols-4 gap-3 mt-4">
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                      <p className="text-[11px] uppercase tracking-wider text-slate-500">Candidates</p>
+                      <p className="text-lg font-bold text-slate-900 mt-1">{activeArchiveRun.totalCandidates}</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                      <p className="text-[11px] uppercase tracking-wider text-slate-500">Shortlisted</p>
+                      <p className="text-lg font-bold text-slate-900 mt-1">{activeArchiveRun.shortlistedCount}</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                      <p className="text-[11px] uppercase tracking-wider text-slate-500">Average Score</p>
+                      <p className="text-lg font-bold text-slate-900 mt-1">{Number(activeArchiveRun.averageScore || 0).toFixed(1)}%</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                      <p className="text-[11px] uppercase tracking-wider text-slate-500">Run Key</p>
+                      <p className="text-sm font-semibold text-slate-900 mt-1 truncate">{activeArchiveRun.id}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                  {(activeArchiveRun.topCandidates || []).map((candidate) => (
+                    <div key={candidate.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div>
+                          <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Rank #{candidate.rank ?? '-'}</p>
+                          <p className="text-lg font-bold text-slate-900 mt-1">{candidate.candidate_name}</p>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {Number(candidate.overall_score || 0).toFixed(1)}% • {candidate.match_label || 'Unrated'} • Risk {candidate.risk_level || 'N/A'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-3xl font-extrabold text-slate-900">{Number(candidate.overall_score || 0).toFixed(1)}%</p>
+                          <p className="text-xs text-slate-500">Decision {Number(candidate.decision_score || 0).toFixed(1)}%</p>
+                        </div>
+                      </div>
+
+                      <div className="grid sm:grid-cols-2 gap-3 mt-4 text-sm">
+                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                          <p className="text-[11px] uppercase tracking-wider text-slate-500">Strengths</p>
+                          <p className="mt-2 text-slate-700">{(candidate.top_strengths || []).join(', ') || 'N/A'}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                          <p className="text-[11px] uppercase tracking-wider text-slate-500">Gaps</p>
+                          <p className="mt-2 text-slate-700">{(candidate.top_gaps || []).join(', ') || 'N/A'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="p-8 rounded-2xl border border-slate-200 bg-white text-center">
+                <Download className="mx-auto text-slate-300" size={36} />
+                <h3 className="mt-3 text-xl font-bold text-slate-800">Select a saved run</h3>
+                <p className="text-sm text-slate-500 mt-1">Pick an archive item on the left to inspect full candidate details, export CSV, or delete it.</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     );
   };
@@ -1389,28 +1768,7 @@ const RecruiterDashboard = () => {
       <Sidebar />
 
       {/* Mobile Menu Button */}
-      <motion.button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed left-4 top-[calc(1rem+env(safe-area-inset-top))] z-50 p-2 rounded-xl bg-white/80 backdrop-blur-md border border-slate-200 shadow-sm md:hidden text-slate-700"
-        whileHover={{ scale: 1.05 }}
-        aria-label={sidebarOpen ? 'Close navigation' : 'Open navigation'}
-      >
-        {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-      </motion.button>
-
-      {/* Mobile Overlay */}
-      {sidebarOpen && (
-        <motion.div
-          className="fixed inset-0 bg-black/50 z-30 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        />
-      )}
-
-      {/* Main Content */}
-      <div className="relative z-0 min-h-screen p-4 pt-20 pb-8 sm:p-4 sm:pt-16 md:ml-64 md:p-6 md:pt-6">
-        <motion.div
+      <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
@@ -1747,7 +2105,6 @@ const RecruiterDashboard = () => {
           </motion.div>
         </div>
       </div>
-    </div>
   );
 };
 
