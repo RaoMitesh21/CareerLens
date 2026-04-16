@@ -438,6 +438,18 @@ def upsert_shortlist(
     normalized_gaps = _coerce_list(request.top_gaps)
     include_skill_rows = _shortlist_skills_table_available(db)
 
+    def _sync_skill_rows_best_effort(shortlist_id: int) -> bool:
+        """Persist normalized skill rows without breaking shortlist save on failure."""
+        if not include_skill_rows:
+            return False
+        try:
+            _replace_shortlist_skills(db, shortlist_id, normalized_strengths, normalized_gaps)
+            db.commit()
+            return True
+        except Exception:
+            db.rollback()
+            return False
+
     existing_id = _find_existing_shortlist_id(
         db=db,
         recruiter_id=current_user.id,
@@ -461,15 +473,14 @@ def upsert_shortlist(
             },
             synchronize_session=False,
         )
-        db.flush()
-        if include_skill_rows:
-            _replace_shortlist_skills(db, existing_id, normalized_strengths, normalized_gaps)
         try:
             db.commit()
         except Exception:
             db.rollback()
             raise HTTPException(status_code=500, detail="Failed to save shortlist")
-        return _fetch_shortlist_by_id_safe(db, existing_id, include_skill_rows=include_skill_rows)
+
+        skills_saved = _sync_skill_rows_best_effort(existing_id)
+        return _fetch_shortlist_by_id_safe(db, existing_id, include_skill_rows=skills_saved)
 
     entry = RecruiterShortlist(
         recruiter_id=current_user.id,
@@ -489,9 +500,9 @@ def upsert_shortlist(
     try:
         db.add(entry)
         db.flush()
-        if include_skill_rows:
-            _replace_shortlist_skills(db, entry.id, normalized_strengths, normalized_gaps)
+        entry_id = int(entry.id)
         db.commit()
+        skills_saved = _sync_skill_rows_best_effort(entry_id)
     except IntegrityError:
         db.rollback()
         existing_id = _find_existing_shortlist_id(
@@ -518,20 +529,19 @@ def upsert_shortlist(
             },
             synchronize_session=False,
         )
-        db.flush()
-        if include_skill_rows:
-            _replace_shortlist_skills(db, existing_id, normalized_strengths, normalized_gaps)
         try:
             db.commit()
         except Exception:
             db.rollback()
             raise HTTPException(status_code=500, detail="Failed to save shortlist")
-        return _fetch_shortlist_by_id_safe(db, existing_id, include_skill_rows=include_skill_rows)
+
+        skills_saved = _sync_skill_rows_best_effort(existing_id)
+        return _fetch_shortlist_by_id_safe(db, existing_id, include_skill_rows=skills_saved)
     except Exception:
         db.rollback()
         raise HTTPException(status_code=500, detail="Failed to save shortlist")
-    db.refresh(entry)
-    return _serialize_shortlist(entry, include_skill_rows=include_skill_rows)
+
+    return _fetch_shortlist_by_id_safe(db, entry_id, include_skill_rows=skills_saved)
 
 
 @router.delete("/{shortlist_id}", status_code=204)
