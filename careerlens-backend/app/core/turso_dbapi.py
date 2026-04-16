@@ -90,7 +90,11 @@ def _to_turso_value(value):
     if isinstance(value, int):
         return {"type": "integer", "value": str(value)}
     if isinstance(value, float):
-        return {"type": "float", "value": str(value)}
+        import math
+        if not math.isfinite(value):
+            return {"type": "null"}
+        # Hrana protocol: float values MUST be JSON numbers, not strings.
+        return {"type": "float", "value": value}
     return {"type": "text", "value": str(value)}
 
 def connect(*args, **kwargs):
