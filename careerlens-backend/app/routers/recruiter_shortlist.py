@@ -314,8 +314,16 @@ def get_current_user(
             detail="Invalid token payload",
         )
 
+    try:
+        user_id = int(sub)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload",
+        )
+
     user = db.query(User).filter(
-        User.id == int(sub),
+        User.id == user_id,
         User.is_active == True,
         User.is_deleted == False,
     ).first()
