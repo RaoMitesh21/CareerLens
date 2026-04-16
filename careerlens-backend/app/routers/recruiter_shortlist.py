@@ -5,6 +5,7 @@ app/routers/recruiter_shortlist.py — Recruiter shortlist endpoints
 import ast
 import json
 import math
+import traceback
 from datetime import datetime
 from typing import Optional
 
@@ -32,7 +33,11 @@ def _normalize_analysis_mode(mode: Optional[str]) -> str:
 
 def _normalize_key(value: str) -> str:
     # Keep persisted display text readable while normalizing matching behavior.
-    return " ".join((value or "").strip().split())
+    return " ".join((value or "").replace("\x00", " ").strip().split())
+
+
+def _clamp_text(value: str, max_len: int) -> str:
+    return _normalize_key(value)[:max_len]
 
 
 def _coerce_list(value) -> list[str]:
@@ -48,6 +53,24 @@ def _coerce_list(value) -> list[str]:
             return []
         return [item.strip() for item in text.split(";") if item.strip()]
     return [str(value).strip()] if str(value).strip() else []
+
+
+def _sanitize_skill_list(value, max_items: int = 20, max_item_len: int = 255) -> list[str]:
+    items = _coerce_list(value)
+    cleaned: list[str] = []
+    seen = set()
+    for item in items:
+        normalized = _clamp_text(item, max_item_len)
+        if not normalized:
+            continue
+        key = normalized.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        cleaned.append(normalized)
+        if len(cleaned) >= max_items:
+            break
+    return cleaned
 
 
 def _parse_json_list(value) -> list[str]:
@@ -434,9 +457,13 @@ def upsert_shortlist(
     normalized_role_title = _normalize_key(request.role_title)
     normalized_candidate_name = _normalize_key(request.candidate_name)
     normalized_mode = _normalize_analysis_mode(request.analysis_mode)
-    normalized_strengths = _coerce_list(request.top_strengths)
-    normalized_gaps = _coerce_list(request.top_gaps)
+    normalized_strengths = _sanitize_skill_list(request.top_strengths)
+    normalized_gaps = _sanitize_skill_list(request.top_gaps)
     include_skill_rows = _shortlist_skills_table_available(db)
+
+    normalized_role_title = _clamp_text(normalized_role_title, 512)
+    normalized_candidate_name = _clamp_text(normalized_candidate_name, 255)
+    normalized_match_label = _clamp_text(request.match_label or "", 64) or None
 
     def _resolve_existing_or_raise(default_message: str = "Failed to save shortlist"):
         existing_fallback_id = _find_existing_shortlist_id(
@@ -478,7 +505,7 @@ def upsert_shortlist(
                 RecruiterShortlist.core_match: request.core_match,
                 RecruiterShortlist.secondary_match: request.secondary_match,
                 RecruiterShortlist.bonus_match: request.bonus_match,
-                RecruiterShortlist.match_label: request.match_label,
+                RecruiterShortlist.match_label: normalized_match_label,
                 RecruiterShortlist.analysis_mode: normalized_mode,
                 RecruiterShortlist.top_strengths: normalized_strengths,
                 RecruiterShortlist.top_gaps: normalized_gaps,
@@ -504,6 +531,7 @@ def upsert_shortlist(
         secondary_match=request.secondary_match,
         bonus_match=request.bonus_match,
         match_label=request.match_label,
+        match_label=normalized_match_label,
         analysis_mode=normalized_mode,
         top_strengths=normalized_strengths,
         top_gaps=normalized_gaps,
@@ -534,7 +562,7 @@ def upsert_shortlist(
                 RecruiterShortlist.core_match: request.core_match,
                 RecruiterShortlist.secondary_match: request.secondary_match,
                 RecruiterShortlist.bonus_match: request.bonus_match,
-                RecruiterShortlist.match_label: request.match_label,
+                RecruiterShortlist.match_label: normalized_match_label,
                 RecruiterShortlist.analysis_mode: normalized_mode,
                 RecruiterShortlist.top_strengths: normalized_strengths,
                 RecruiterShortlist.top_gaps: normalized_gaps,
@@ -550,6 +578,8 @@ def upsert_shortlist(
         skills_saved = _sync_skill_rows_best_effort(existing_id)
         return _fetch_shortlist_by_id_safe(db, existing_id, include_skill_rows=skills_saved)
     except Exception:
+        print("[SHORTLIST] Unexpected upsert error")
+        traceback.print_exc()
         db.rollback()
         return _resolve_existing_or_raise("Failed to save shortlist")
 
