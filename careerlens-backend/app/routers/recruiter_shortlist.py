@@ -2,13 +2,14 @@
 app/routers/recruiter_shortlist.py — Recruiter shortlist endpoints
 """
 
+import ast
+import json
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func, inspect
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import String, cast, func, inspect, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
@@ -45,6 +46,147 @@ def _coerce_list(value) -> list[str]:
             return []
         return [item.strip() for item in text.split(";") if item.strip()]
     return [str(value).strip()] if str(value).strip() else []
+
+
+def _parse_json_list(value) -> list[str]:
+    """Best-effort parser for list-like values persisted in legacy shortlist rows."""
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return _coerce_list(value)
+
+    text = str(value).strip()
+    if not text or text in {"None", "NULL", "null"}:
+        return []
+
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, (list, tuple)):
+            return _coerce_list(parsed)
+        if isinstance(parsed, str):
+            return _coerce_list(parsed)
+    except Exception:
+        pass
+
+    try:
+        parsed = ast.literal_eval(text)
+        if isinstance(parsed, (list, tuple, set)):
+            return _coerce_list(list(parsed))
+        if isinstance(parsed, str):
+            return _coerce_list(parsed)
+    except Exception:
+        pass
+
+    return _coerce_list(text)
+
+
+def _serialize_shortlist_row_mapping(row) -> dict:
+    return {
+        "id": row["id"],
+        "recruiter_id": row["recruiter_id"],
+        "role_title": (row["role_title"] or "").strip(),
+        "candidate_name": (row["candidate_name"] or "").strip(),
+        "rank": row["rank"],
+        "overall_score": row["overall_score"],
+        "core_match": row["core_match"],
+        "secondary_match": row["secondary_match"],
+        "bonus_match": row["bonus_match"],
+        "match_label": row["match_label"],
+        "analysis_mode": _normalize_analysis_mode(row["analysis_mode"]),
+        "top_strengths": _parse_json_list(row.get("top_strengths_raw")),
+        "top_gaps": _parse_json_list(row.get("top_gaps_raw")),
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+def _find_existing_shortlist_id(
+    db: Session,
+    recruiter_id: int,
+    role_title: str,
+    candidate_name: str,
+    analysis_mode: str,
+) -> Optional[int]:
+    table = RecruiterShortlist.__table__
+    stmt = (
+        select(table.c.id)
+        .where(table.c.recruiter_id == recruiter_id)
+        .where(func.lower(func.trim(table.c.role_title)) == role_title.lower())
+        .where(func.lower(func.trim(table.c.candidate_name)) == candidate_name.lower())
+        .where(func.lower(func.trim(func.coalesce(table.c.analysis_mode, "esco"))) == analysis_mode)
+        .limit(1)
+    )
+    return db.execute(stmt).scalar_one_or_none()
+
+
+def _fetch_shortlist_rows_safe(db: Session, recruiter_id: int, role: Optional[str] = None) -> list[dict]:
+    table = RecruiterShortlist.__table__
+    stmt = (
+        select(
+            table.c.id,
+            table.c.recruiter_id,
+            table.c.role_title,
+            table.c.candidate_name,
+            table.c.rank,
+            table.c.overall_score,
+            table.c.core_match,
+            table.c.secondary_match,
+            table.c.bonus_match,
+            table.c.match_label,
+            table.c.analysis_mode,
+            cast(table.c.top_strengths, String).label("top_strengths_raw"),
+            cast(table.c.top_gaps, String).label("top_gaps_raw"),
+            table.c.created_at,
+            table.c.updated_at,
+        )
+        .where(table.c.recruiter_id == recruiter_id)
+        .order_by(table.c.created_at.desc())
+    )
+    if role:
+        normalized_role = _normalize_key(role).lower()
+        stmt = stmt.where(func.lower(func.trim(table.c.role_title)) == normalized_role)
+
+    rows = db.execute(stmt).mappings().all()
+    return [_serialize_shortlist_row_mapping(row) for row in rows]
+
+
+def _fetch_shortlist_by_id_safe(db: Session, shortlist_id: int, include_skill_rows: bool = True) -> dict:
+    try:
+        query = db.query(RecruiterShortlist).filter(RecruiterShortlist.id == shortlist_id)
+        if include_skill_rows:
+            query = query.options(joinedload(RecruiterShortlist.shortlist_skills))
+        entry = query.first()
+        if entry:
+            return _serialize_shortlist(entry, include_skill_rows=include_skill_rows)
+    except Exception:
+        pass
+
+    table = RecruiterShortlist.__table__
+    stmt = (
+        select(
+            table.c.id,
+            table.c.recruiter_id,
+            table.c.role_title,
+            table.c.candidate_name,
+            table.c.rank,
+            table.c.overall_score,
+            table.c.core_match,
+            table.c.secondary_match,
+            table.c.bonus_match,
+            table.c.match_label,
+            table.c.analysis_mode,
+            cast(table.c.top_strengths, String).label("top_strengths_raw"),
+            cast(table.c.top_gaps, String).label("top_gaps_raw"),
+            table.c.created_at,
+            table.c.updated_at,
+        )
+        .where(table.c.id == shortlist_id)
+        .limit(1)
+    )
+    row = db.execute(stmt).mappings().first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Shortlist entry not found")
+    return _serialize_shortlist_row_mapping(row)
 
 
 def _shortlist_skills_table_available(db: Session) -> bool:
@@ -171,15 +313,8 @@ def list_shortlists(
     try:
         entries = query.order_by(RecruiterShortlist.created_at.desc()).all()
         return [_serialize_shortlist(entry, include_skill_rows=include_skill_rows) for entry in entries]
-    except SQLAlchemyError:
-        fallback_query = db.query(RecruiterShortlist).filter(
-            RecruiterShortlist.recruiter_id == current_user.id,
-        )
-        if role:
-            normalized_role = _normalize_key(role).lower()
-            fallback_query = fallback_query.filter(func.lower(func.trim(RecruiterShortlist.role_title)) == normalized_role)
-        entries = fallback_query.order_by(RecruiterShortlist.created_at.desc()).all()
-        return [_serialize_shortlist(entry, include_skill_rows=False) for entry in entries]
+    except Exception:
+        return _fetch_shortlist_rows_safe(db, recruiter_id=current_user.id, role=role)
 
 
 @router.post("", response_model=RecruiterShortlistResponse)
@@ -196,33 +331,38 @@ def upsert_shortlist(
     normalized_gaps = _coerce_list(request.top_gaps)
     include_skill_rows = _shortlist_skills_table_available(db)
 
-    existing = db.query(RecruiterShortlist).filter(
-        RecruiterShortlist.recruiter_id == current_user.id,
-        func.lower(func.trim(RecruiterShortlist.role_title)) == normalized_role_title.lower(),
-        func.lower(func.trim(RecruiterShortlist.candidate_name)) == normalized_candidate_name.lower(),
-        func.lower(func.trim(func.coalesce(RecruiterShortlist.analysis_mode, "esco"))) == normalized_mode,
-    ).first()
+    existing_id = _find_existing_shortlist_id(
+        db=db,
+        recruiter_id=current_user.id,
+        role_title=normalized_role_title,
+        candidate_name=normalized_candidate_name,
+        analysis_mode=normalized_mode,
+    )
 
-    if existing:
-        existing.rank = request.rank
-        existing.overall_score = request.overall_score
-        existing.core_match = request.core_match
-        existing.secondary_match = request.secondary_match
-        existing.bonus_match = request.bonus_match
-        existing.match_label = request.match_label
-        existing.analysis_mode = normalized_mode
-        existing.top_strengths = normalized_strengths
-        existing.top_gaps = normalized_gaps
+    if existing_id:
+        db.query(RecruiterShortlist).filter(RecruiterShortlist.id == existing_id).update(
+            {
+                RecruiterShortlist.rank: request.rank,
+                RecruiterShortlist.overall_score: request.overall_score,
+                RecruiterShortlist.core_match: request.core_match,
+                RecruiterShortlist.secondary_match: request.secondary_match,
+                RecruiterShortlist.bonus_match: request.bonus_match,
+                RecruiterShortlist.match_label: request.match_label,
+                RecruiterShortlist.analysis_mode: normalized_mode,
+                RecruiterShortlist.top_strengths: normalized_strengths,
+                RecruiterShortlist.top_gaps: normalized_gaps,
+            },
+            synchronize_session=False,
+        )
         db.flush()
         if include_skill_rows:
-            _replace_shortlist_skills(db, existing.id, normalized_strengths, normalized_gaps)
+            _replace_shortlist_skills(db, existing_id, normalized_strengths, normalized_gaps)
         try:
             db.commit()
         except Exception:
             db.rollback()
             raise HTTPException(status_code=500, detail="Failed to save shortlist")
-        db.refresh(existing)
-        return _serialize_shortlist(existing, include_skill_rows=include_skill_rows)
+        return _fetch_shortlist_by_id_safe(db, existing_id, include_skill_rows=include_skill_rows)
 
     entry = RecruiterShortlist(
         recruiter_id=current_user.id,
@@ -247,33 +387,39 @@ def upsert_shortlist(
         db.commit()
     except IntegrityError:
         db.rollback()
-        existing = db.query(RecruiterShortlist).filter(
-            RecruiterShortlist.recruiter_id == current_user.id,
-            func.lower(func.trim(RecruiterShortlist.role_title)) == normalized_role_title.lower(),
-            func.lower(func.trim(RecruiterShortlist.candidate_name)) == normalized_candidate_name.lower(),
-            func.lower(func.trim(func.coalesce(RecruiterShortlist.analysis_mode, "esco"))) == normalized_mode,
-        ).first()
-        if not existing:
+        existing_id = _find_existing_shortlist_id(
+            db=db,
+            recruiter_id=current_user.id,
+            role_title=normalized_role_title,
+            candidate_name=normalized_candidate_name,
+            analysis_mode=normalized_mode,
+        )
+        if not existing_id:
             raise HTTPException(status_code=409, detail="Shortlist entry already exists")
-        existing.rank = request.rank
-        existing.overall_score = request.overall_score
-        existing.core_match = request.core_match
-        existing.secondary_match = request.secondary_match
-        existing.bonus_match = request.bonus_match
-        existing.match_label = request.match_label
-        existing.analysis_mode = normalized_mode
-        existing.top_strengths = normalized_strengths
-        existing.top_gaps = normalized_gaps
+
+        db.query(RecruiterShortlist).filter(RecruiterShortlist.id == existing_id).update(
+            {
+                RecruiterShortlist.rank: request.rank,
+                RecruiterShortlist.overall_score: request.overall_score,
+                RecruiterShortlist.core_match: request.core_match,
+                RecruiterShortlist.secondary_match: request.secondary_match,
+                RecruiterShortlist.bonus_match: request.bonus_match,
+                RecruiterShortlist.match_label: request.match_label,
+                RecruiterShortlist.analysis_mode: normalized_mode,
+                RecruiterShortlist.top_strengths: normalized_strengths,
+                RecruiterShortlist.top_gaps: normalized_gaps,
+            },
+            synchronize_session=False,
+        )
         db.flush()
         if include_skill_rows:
-            _replace_shortlist_skills(db, existing.id, normalized_strengths, normalized_gaps)
+            _replace_shortlist_skills(db, existing_id, normalized_strengths, normalized_gaps)
         try:
             db.commit()
         except Exception:
             db.rollback()
             raise HTTPException(status_code=500, detail="Failed to save shortlist")
-        db.refresh(existing)
-        return _serialize_shortlist(existing, include_skill_rows=include_skill_rows)
+        return _fetch_shortlist_by_id_safe(db, existing_id, include_skill_rows=include_skill_rows)
     except Exception:
         db.rollback()
         raise HTTPException(status_code=500, detail="Failed to save shortlist")
