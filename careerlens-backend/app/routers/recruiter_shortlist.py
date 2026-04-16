@@ -530,7 +530,6 @@ def upsert_shortlist(
         core_match=request.core_match,
         secondary_match=request.secondary_match,
         bonus_match=request.bonus_match,
-        match_label=request.match_label,
         match_label=normalized_match_label,
         analysis_mode=normalized_mode,
         top_strengths=normalized_strengths,
