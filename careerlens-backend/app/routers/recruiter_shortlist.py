@@ -147,7 +147,54 @@ def _fetch_shortlist_rows_safe(db: Session, recruiter_id: int, role: Optional[st
         stmt = stmt.where(func.lower(func.trim(table.c.role_title)) == normalized_role)
 
     rows = db.execute(stmt).mappings().all()
-    return [_serialize_shortlist_row_mapping(row) for row in rows]
+    items = [_serialize_shortlist_row_mapping(row) for row in rows]
+
+    # Prefer normalized skills when available, but never fail the list request.
+    if not items or not _shortlist_skills_table_available(db):
+        return items
+
+    try:
+        shortlist_ids = [int(item["id"]) for item in items if item.get("id") is not None]
+        if not shortlist_ids:
+            return items
+
+        skill_rows = (
+            db.query(
+                RecruiterShortlistSkill.shortlist_id,
+                RecruiterShortlistSkill.skill_type,
+                RecruiterShortlistSkill.skill_order,
+                RecruiterShortlistSkill.skill_name,
+            )
+            .filter(RecruiterShortlistSkill.shortlist_id.in_(shortlist_ids))
+            .all()
+        )
+
+        skill_map: dict[int, dict[str, list[tuple[int, str]]]] = {}
+        for shortlist_id, skill_type, skill_order, skill_name in skill_rows:
+            if shortlist_id is None or not skill_name:
+                continue
+            entry = skill_map.setdefault(int(shortlist_id), {"strength": [], "gap": []})
+            if skill_type not in {"strength", "gap"}:
+                continue
+            entry[skill_type].append((int(skill_order or 0), str(skill_name).strip()))
+
+        for item in items:
+            sid = int(item["id"])
+            mapped = skill_map.get(sid)
+            if not mapped:
+                continue
+
+            strengths = [name for _, name in sorted(mapped["strength"], key=lambda row: row[0]) if name]
+            gaps = [name for _, name in sorted(mapped["gap"], key=lambda row: row[0]) if name]
+
+            if strengths:
+                item["top_strengths"] = strengths
+            if gaps:
+                item["top_gaps"] = gaps
+    except Exception:
+        return items
+
+    return items
 
 
 def _fetch_shortlist_by_id_safe(db: Session, shortlist_id: int, include_skill_rows: bool = True) -> dict:
@@ -299,22 +346,7 @@ def list_shortlists(
     db: Session = Depends(get_db),
 ):
     """Get saved shortlist entries for the authenticated recruiter."""
-    include_skill_rows = _shortlist_skills_table_available(db)
-    query = db.query(RecruiterShortlist).filter(
-        RecruiterShortlist.recruiter_id == current_user.id,
-    )
-    if include_skill_rows:
-        query = query.options(joinedload(RecruiterShortlist.shortlist_skills))
-
-    if role:
-        normalized_role = _normalize_key(role).lower()
-        query = query.filter(func.lower(func.trim(RecruiterShortlist.role_title)) == normalized_role)
-
-    try:
-        entries = query.order_by(RecruiterShortlist.created_at.desc()).all()
-        return [_serialize_shortlist(entry, include_skill_rows=include_skill_rows) for entry in entries]
-    except Exception:
-        return _fetch_shortlist_rows_safe(db, recruiter_id=current_user.id, role=role)
+    return _fetch_shortlist_rows_safe(db, recruiter_id=current_user.id, role=role)
 
 
 @router.post("", response_model=RecruiterShortlistResponse)
