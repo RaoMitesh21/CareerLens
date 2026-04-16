@@ -438,6 +438,18 @@ def upsert_shortlist(
     normalized_gaps = _coerce_list(request.top_gaps)
     include_skill_rows = _shortlist_skills_table_available(db)
 
+    def _resolve_existing_or_raise(default_message: str = "Failed to save shortlist"):
+        existing_fallback_id = _find_existing_shortlist_id(
+            db=db,
+            recruiter_id=current_user.id,
+            role_title=normalized_role_title,
+            candidate_name=normalized_candidate_name,
+            analysis_mode=normalized_mode,
+        )
+        if existing_fallback_id:
+            return _fetch_shortlist_by_id_safe(db, existing_fallback_id, include_skill_rows=False)
+        raise HTTPException(status_code=500, detail=default_message)
+
     def _sync_skill_rows_best_effort(shortlist_id: int) -> bool:
         """Persist normalized skill rows without breaking shortlist save on failure."""
         if not include_skill_rows:
@@ -477,7 +489,7 @@ def upsert_shortlist(
             db.commit()
         except Exception:
             db.rollback()
-            raise HTTPException(status_code=500, detail="Failed to save shortlist")
+            return _resolve_existing_or_raise("Failed to save shortlist")
 
         skills_saved = _sync_skill_rows_best_effort(existing_id)
         return _fetch_shortlist_by_id_safe(db, existing_id, include_skill_rows=skills_saved)
@@ -533,13 +545,13 @@ def upsert_shortlist(
             db.commit()
         except Exception:
             db.rollback()
-            raise HTTPException(status_code=500, detail="Failed to save shortlist")
+            return _resolve_existing_or_raise("Failed to save shortlist")
 
         skills_saved = _sync_skill_rows_best_effort(existing_id)
         return _fetch_shortlist_by_id_safe(db, existing_id, include_skill_rows=skills_saved)
     except Exception:
         db.rollback()
-        raise HTTPException(status_code=500, detail="Failed to save shortlist")
+        return _resolve_existing_or_raise("Failed to save shortlist")
 
     return _fetch_shortlist_by_id_safe(db, entry_id, include_skill_rows=skills_saved)
 
