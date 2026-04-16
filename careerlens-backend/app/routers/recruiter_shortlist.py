@@ -4,6 +4,8 @@ app/routers/recruiter_shortlist.py — Recruiter shortlist endpoints
 
 import ast
 import json
+import math
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -80,8 +82,73 @@ def _parse_json_list(value) -> list[str]:
     return _coerce_list(text)
 
 
-def _serialize_shortlist_row_mapping(row) -> dict:
+def _coerce_int(value) -> Optional[int]:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _coerce_float(value) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        num = float(value)
+        if not math.isfinite(num):
+            return None
+        return num
+    except (TypeError, ValueError):
+        return None
+
+
+def _coerce_datetime(value) -> datetime:
+    if isinstance(value, datetime):
+        return value
+    if value is None:
+        return datetime.utcnow()
+
+    text = str(value).strip()
+    if not text:
+        return datetime.utcnow()
+
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        pass
+
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S.%f"):
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+
+    return datetime.utcnow()
+
+
+def _sanitize_shortlist_payload(payload: dict) -> dict:
     return {
+        "id": int(payload.get("id") or 0),
+        "recruiter_id": int(payload.get("recruiter_id") or 0),
+        "role_title": str(payload.get("role_title") or "").strip(),
+        "candidate_name": str(payload.get("candidate_name") or "").strip(),
+        "rank": _coerce_int(payload.get("rank")),
+        "overall_score": _coerce_float(payload.get("overall_score")),
+        "core_match": _coerce_float(payload.get("core_match")),
+        "secondary_match": _coerce_float(payload.get("secondary_match")),
+        "bonus_match": _coerce_float(payload.get("bonus_match")),
+        "match_label": (str(payload.get("match_label")).strip() if payload.get("match_label") is not None else None),
+        "analysis_mode": _normalize_analysis_mode(payload.get("analysis_mode")),
+        "top_strengths": _coerce_list(payload.get("top_strengths")),
+        "top_gaps": _coerce_list(payload.get("top_gaps")),
+        "created_at": _coerce_datetime(payload.get("created_at")),
+        "updated_at": _coerce_datetime(payload.get("updated_at")),
+    }
+
+
+def _serialize_shortlist_row_mapping(row) -> dict:
+    return _sanitize_shortlist_payload({
         "id": row["id"],
         "recruiter_id": row["recruiter_id"],
         "role_title": (row["role_title"] or "").strip(),
@@ -97,7 +164,7 @@ def _serialize_shortlist_row_mapping(row) -> dict:
         "top_gaps": _parse_json_list(row.get("top_gaps_raw")),
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
-    }
+    })
 
 
 def _find_existing_shortlist_id(
@@ -136,8 +203,8 @@ def _fetch_shortlist_rows_safe(db: Session, recruiter_id: int, role: Optional[st
             table.c.analysis_mode,
             cast(table.c.top_strengths, String).label("top_strengths_raw"),
             cast(table.c.top_gaps, String).label("top_gaps_raw"),
-            table.c.created_at,
-            table.c.updated_at,
+            cast(table.c.created_at, String).label("created_at"),
+            cast(table.c.updated_at, String).label("updated_at"),
         )
         .where(table.c.recruiter_id == recruiter_id)
         .order_by(table.c.created_at.desc())
@@ -224,8 +291,8 @@ def _fetch_shortlist_by_id_safe(db: Session, shortlist_id: int, include_skill_ro
             table.c.analysis_mode,
             cast(table.c.top_strengths, String).label("top_strengths_raw"),
             cast(table.c.top_gaps, String).label("top_gaps_raw"),
-            table.c.created_at,
-            table.c.updated_at,
+            cast(table.c.created_at, String).label("created_at"),
+            cast(table.c.updated_at, String).label("updated_at"),
         )
         .where(table.c.id == shortlist_id)
         .limit(1)
@@ -248,7 +315,7 @@ def _shortlist_skills_table_available(db: Session) -> bool:
 
 def _serialize_shortlist(entry: RecruiterShortlist, include_skill_rows: bool = True) -> dict:
     skill_rows = list(getattr(entry, "shortlist_skills", []) or []) if include_skill_rows else []
-    return {
+    return _sanitize_shortlist_payload({
         "id": entry.id,
         "recruiter_id": entry.recruiter_id,
         "role_title": (entry.role_title or "").strip(),
@@ -276,7 +343,7 @@ def _serialize_shortlist(entry: RecruiterShortlist, include_skill_rows: bool = T
         ] or _coerce_list(entry.top_gaps),
         "created_at": entry.created_at,
         "updated_at": entry.updated_at,
-    }
+    })
 
 
 def _replace_shortlist_skills(db: Session, shortlist_id: int, strengths: list[str], gaps: list[str]) -> None:
