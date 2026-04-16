@@ -47,6 +47,13 @@ def _coerce_list(value) -> list[str]:
         return [str(item).strip() for item in value if str(item).strip()]
     if isinstance(value, tuple):
         return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, dict):
+        # JSON column returned an object instead of a list — extract values.
+        try:
+            vals = list(value.values())
+            return [str(v).strip() for v in vals if str(v).strip()]
+        except Exception:
+            return []
     if isinstance(value, str):
         text = value.strip()
         if not text or text in {"None", "NULL"}:
@@ -151,9 +158,11 @@ def _coerce_datetime(value) -> datetime:
 
 
 def _sanitize_shortlist_payload(payload: dict) -> dict:
+    raw_id = payload.get("id")
+    raw_recruiter_id = payload.get("recruiter_id")
     return {
-        "id": int(payload.get("id") or 0),
-        "recruiter_id": int(payload.get("recruiter_id") or 0),
+        "id": _coerce_int(raw_id) if raw_id is not None else 0,
+        "recruiter_id": _coerce_int(raw_recruiter_id) if raw_recruiter_id is not None else 0,
         "role_title": str(payload.get("role_title") or "").strip(),
         "candidate_name": str(payload.get("candidate_name") or "").strip(),
         "rank": _coerce_int(payload.get("rank")),
@@ -337,7 +346,11 @@ def _shortlist_skills_table_available(db: Session) -> bool:
 
 
 def _serialize_shortlist(entry: RecruiterShortlist, include_skill_rows: bool = True) -> dict:
-    skill_rows = list(getattr(entry, "shortlist_skills", []) or []) if include_skill_rows else []
+    try:
+        skill_rows = list(getattr(entry, "shortlist_skills", []) or []) if include_skill_rows else []
+    except Exception:
+        # Relationship load failed (e.g. skills table missing) — fall back to empty.
+        skill_rows = []
     return _sanitize_shortlist_payload({
         "id": entry.id,
         "recruiter_id": entry.recruiter_id,
@@ -354,14 +367,14 @@ def _serialize_shortlist(entry: RecruiterShortlist, include_skill_rows: bool = T
             skill.skill_name
             for skill in sorted(
                 [row for row in skill_rows if row.skill_type == "strength"],
-                key=lambda item: item.skill_order,
+                key=lambda item: (item.skill_order or 0),
             )
         ] or _coerce_list(entry.top_strengths),
         "top_gaps": [
             skill.skill_name
             for skill in sorted(
                 [row for row in skill_rows if row.skill_type == "gap"],
-                key=lambda item: item.skill_order,
+                key=lambda item: (item.skill_order or 0),
             )
         ] or _coerce_list(entry.top_gaps),
         "created_at": entry.created_at,
@@ -444,7 +457,14 @@ def list_shortlists(
     db: Session = Depends(get_db),
 ):
     """Get saved shortlist entries for the authenticated recruiter."""
-    return _fetch_shortlist_rows_safe(db, recruiter_id=current_user.id, role=role)
+    try:
+        return _fetch_shortlist_rows_safe(db, recruiter_id=current_user.id, role=role)
+    except HTTPException:
+        raise
+    except Exception:
+        print("[SHORTLIST] Unexpected error in list_shortlists")
+        traceback.print_exc()
+        return []
 
 
 @router.post("", response_model=RecruiterShortlistResponse)
@@ -592,18 +612,52 @@ def delete_shortlist(
     db: Session = Depends(get_db),
 ):
     """Delete one shortlist entry owned by the authenticated recruiter."""
-    entry = db.query(RecruiterShortlist).filter(
-        RecruiterShortlist.id == shortlist_id,
-        RecruiterShortlist.recruiter_id == current_user.id,
-    ).first()
-
-    if not entry:
-        return Response(status_code=204)
-
-    db.delete(entry)
     try:
+        # Try ORM delete first (handles cascade if skills table exists).
+        entry = db.query(RecruiterShortlist).filter(
+            RecruiterShortlist.id == shortlist_id,
+            RecruiterShortlist.recruiter_id == current_user.id,
+        ).first()
+
+        if not entry:
+            return Response(status_code=204)
+
+        try:
+            db.delete(entry)
+            db.commit()
+            return Response(status_code=204)
+        except Exception:
+            db.rollback()
+    except Exception:
+        # ORM path failed entirely (e.g. lazy-load crash) — fall through to raw SQL.
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+    # Fallback: raw SQL delete that skips ORM relationship loading.
+    try:
+        table = RecruiterShortlist.__table__
+        # Delete child skill rows first (best-effort).
+        if _shortlist_skills_table_available(db):
+            try:
+                skills_table = RecruiterShortlistSkill.__table__
+                db.execute(skills_table.delete().where(skills_table.c.shortlist_id == shortlist_id))
+            except Exception:
+                pass
+        db.execute(
+            table.delete()
+            .where(table.c.id == shortlist_id)
+            .where(table.c.recruiter_id == current_user.id)
+        )
         db.commit()
     except Exception:
-        db.rollback()
+        print("[SHORTLIST] Unexpected error in delete_shortlist")
+        traceback.print_exc()
+        try:
+            db.rollback()
+        except Exception:
+            pass
         raise HTTPException(status_code=500, detail="Failed to delete shortlist")
+
     return Response(status_code=204)
