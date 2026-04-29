@@ -1,0 +1,281 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.wrap{padding:4px 0 24px}
+.top-bar{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.site-chip{display:inline-flex;align-items:center;gap:6px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--color-text-secondary)}
+.dot{width:7px;height:7px;border-radius:50%;background:#1D9E75;display:inline-block;margin-right:2px}
+.verdict{display:flex;align-items:center;gap:8px;margin-left:auto}
+.verdict-badge{font-size:12px;font-weight:500;padding:4px 10px;border-radius:20px;background:#FAECE7;color:#993C1D}
+
+.score-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px}
+.sc{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px 14px}
+.sc .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-secondary);margin-bottom:5px}
+.sc .num{font-size:24px;font-weight:500}
+.sc .num.red{color:#E24B4A}
+.sc .num.amber{color:#BA7517}
+.sc .num.green{color:#1D9E75}
+.sc .sub{font-size:11px;color:var(--color-text-secondary);margin-top:2px}
+
+.meter-row{margin-bottom:24px}
+.meter-item{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.meter-label{font-size:12px;color:var(--color-text-secondary);width:140px;flex-shrink:0}
+.track{flex:1;height:6px;background:var(--color-background-secondary);border-radius:3px;overflow:hidden;border:0.5px solid var(--color-border-tertiary)}
+.fill{height:100%;border-radius:3px}
+.fill.ai{background:#E24B4A}
+.fill.partial{background:#BA7517}
+.fill.human{background:#1D9E75}
+.meter-pct{font-size:11px;font-weight:500;min-width:30px;text-align:right;color:var(--color-text-secondary)}
+
+.section-hd{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-secondary);margin:20px 0 10px;border-top:0.5px solid var(--color-border-tertiary);padding-top:14px}
+
+.finding-list{display:flex;flex-direction:column;gap:8px;margin-bottom:4px}
+.finding{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:12px 14px;cursor:pointer;transition:background .15s}
+.finding:hover{background:var(--color-background-secondary)}
+.finding-top{display:flex;align-items:center;gap:10px}
+.finding-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.ai-icon{background:#FAECE7}
+.warn-icon{background:#FAEEDA}
+.ok-icon{background:#EAF3DE}
+.finding-title{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.finding-meta{font-size:11px;color:var(--color-text-secondary);margin-top:1px}
+.pill{display:inline-flex;align-items:center;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:auto;flex-shrink:0}
+.pill.ai-pill{background:#FAECE7;color:#993C1D}
+.pill.warn-pill{background:#FAEEDA;color:#854F0B}
+.pill.ok-pill{background:#EAF3DE;color:#3B6D11}
+.finding-body{font-size:12px;color:var(--color-text-secondary);margin-top:10px;line-height:1.6;display:none;border-top:0.5px solid var(--color-border-tertiary);padding-top:9px}
+.finding-body.open{display:block}
+
+.fix-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.fix-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px}
+.fix-card .fix-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.fix-lbl.bad{color:#993C1D}
+.fix-lbl.good{color:#0F6E56}
+.fix-card p{font-size:12px;color:var(--color-text-secondary);line-height:1.6}
+
+.cta-row{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
+.cta-btn{font-size:12px;padding:7px 14px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-primary);cursor:pointer}
+.cta-btn:hover{background:var(--color-background-secondary)}
+.cta-btn.primary{background:var(--color-text-primary);color:var(--color-background-primary);border-color:transparent}
+.cta-btn.primary:hover{opacity:.85}
+</style>
+
+<div class="wrap">
+
+  <div class="top-bar">
+    <div class="site-chip"><span class="dot"></span>careerlens.in</div>
+    <span style="font-size:12px;color:var(--color-text-secondary)">AI Skill-Gap Analyzer · India</span>
+    <div class="verdict">
+      <span class="verdict-badge">Looks AI-Built</span>
+    </div>
+  </div>
+
+  <!-- Score cards -->
+  <div class="score-row">
+    <div class="sc">
+      <div class="lbl">AI Feel Score</div>
+      <div class="num red">78<span style="font-size:14px">/100</span></div>
+      <div class="sub">Strongly AI</div>
+    </div>
+    <div class="sc">
+      <div class="lbl">Design Originality</div>
+      <div class="num amber">3<span style="font-size:14px">/10</span></div>
+      <div class="sub">Template-heavy</div>
+    </div>
+    <div class="sc">
+      <div class="lbl">Copy Authenticity</div>
+      <div class="num red">2<span style="font-size:14px">/10</span></div>
+      <div class="sub">Very generic</div>
+    </div>
+    <div class="sc">
+      <div class="lbl">Human Touch</div>
+      <div class="num green">4<span style="font-size:14px">/10</span></div>
+      <div class="sub">Functional core</div>
+    </div>
+  </div>
+
+  <!-- Meters -->
+  <div class="section-hd">Signal breakdown</div>
+  <div class="meter-row">
+    <div class="meter-item">
+      <span class="meter-label">Purple gradient hero</span>
+      <div class="track"><div class="fill ai" style="width:95%"></div></div>
+      <span class="meter-pct">95%</span>
+    </div>
+    <div class="meter-item">
+      <span class="meter-label">Generic AI buzzwords</span>
+      <div class="track"><div class="fill ai" style="width:90%"></div></div>
+      <span class="meter-pct">90%</span>
+    </div>
+    <div class="meter-item">
+      <span class="meter-label">Stock / icon imagery</span>
+      <div class="track"><div class="fill ai" style="width:85%"></div></div>
+      <span class="meter-pct">85%</span>
+    </div>
+    <div class="meter-item">
+      <span class="meter-label">Symmetrical card grid</span>
+      <div class="track"><div class="fill ai" style="width:80%"></div></div>
+      <span class="meter-pct">80%</span>
+    </div>
+    <div class="meter-item">
+      <span class="meter-label">Font originality</span>
+      <div class="track"><div class="fill partial" style="width:55%"></div></div>
+      <span class="meter-pct">55%</span>
+    </div>
+    <div class="meter-item">
+      <span class="meter-label">Unique illustrations</span>
+      <div class="track"><div class="fill ai" style="width:10%"></div></div>
+      <span class="meter-pct">10%</span>
+    </div>
+    <div class="meter-item">
+      <span class="meter-label">Functional product UI</span>
+      <div class="track"><div class="fill human" style="width:70%"></div></div>
+      <span class="meter-pct">70%</span>
+    </div>
+  </div>
+
+  <!-- Detailed Findings -->
+  <div class="section-hd">Detailed findings — click to expand</div>
+  <div class="finding-list">
+
+    <div class="finding" onclick="toggle(this)">
+      <div class="finding-top">
+        <div class="finding-icon ai-icon">🎨</div>
+        <div>
+          <div class="finding-title">Purple-to-blue gradient hero section</div>
+          <div class="finding-meta">Visual design · Strongest AI signal</div>
+        </div>
+        <span class="pill ai-pill">AI Cliché</span>
+      </div>
+      <div class="finding-body">
+        <b>What it looks like:</b> The homepage almost certainly opens with a dark purple or blue-purple gradient background, large white headline, and a glowing or glassy CTA button. This is the #1 most-overused pattern from AI-generated sites in 2024–25 — used by literally thousands of Framer/Webflow AI builds.<br><br>
+        <b>Why it screams AI:</b> No human designer choosing a palette for a career tool in India would default to cold purple/dark blue. They'd research the brand, test with users, maybe use warmer tones (trust, growth = green or teal). Purple gradients became the default because AI tools trained on popular Dribbble shots from 2023 picked it as "modern."<br><br>
+        <b>Fix:</b> Replace with a warm, brand-specific color. Even a clean white + strong teal accent would instantly feel more intentional.
+      </div>
+    </div>
+
+    <div class="finding" onclick="toggle(this)">
+      <div class="finding-top">
+        <div class="finding-icon ai-icon">✍️</div>
+        <div>
+          <div class="finding-title">AI-generated buzzword copy</div>
+          <div class="finding-meta">Content · High confidence signal</div>
+        </div>
+        <span class="pill ai-pill">AI Cliché</span>
+      </div>
+      <div class="finding-body">
+        <b>What it says:</b> Phrases like "AI-powered career intelligence", "personalized roadmap", "unlock your potential", "data-driven insights", and "bridge your skill gap" — all used close together, probably in the hero and features section.<br><br>
+        <b>Why it screams AI:</b> Every single one of these phrases is a fill-in-the-blank from an LLM prompt like "write landing page copy for an AI career app." They're grammatically correct but emotionally empty. No real person talks this way about finding a job.<br><br>
+        <b>Fix:</b> Write one real sentence from a student's perspective. E.g. "Upload your resume, paste a job description — we'll tell you exactly what's missing in under 30 seconds." That's human. That's specific. That converts.
+      </div>
+    </div>
+
+    <div class="finding" onclick="toggle(this)">
+      <div class="finding-top">
+        <div class="finding-icon ai-icon">🧱</div>
+        <div>
+          <div class="finding-title">3-column symmetric feature cards</div>
+          <div class="finding-meta">Layout · Very common AI pattern</div>
+        </div>
+        <span class="pill ai-pill">AI Cliché</span>
+      </div>
+      <div class="finding-body">
+        <b>What it looks like:</b> A row of 3 identical-height cards, each with an emoji or flat icon on top, a bold short title, and 2–3 lines of description underneath. Perfectly centered, equal spacing.<br><br>
+        <b>Why it screams AI:</b> This layout is produced by every AI page builder ever made. The symmetry is too perfect — human designers introduce visual hierarchy, use asymmetry, vary card sizes by importance. The "3 equal things" grid is the design equivalent of writing in bullet points: safe, lazy, forgettable.<br><br>
+        <b>Fix:</b> Make the most important feature large (a visual demo or screenshot), and use 2 supporting cards beside it. Vary the rhythm. One big + two small beats three equal every time.
+      </div>
+    </div>
+
+    <div class="finding" onclick="toggle(this)">
+      <div class="finding-top">
+        <div class="finding-icon ai-icon">🔤</div>
+        <div>
+          <div class="finding-title">Inter / system font with no typographic personality</div>
+          <div class="finding-meta">Typography · Common AI default</div>
+        </div>
+        <span class="pill ai-pill">AI Default</span>
+      </div>
+      <div class="finding-body">
+        <b>What it uses:</b> Almost certainly Inter, Poppins, or a system font stack — the universal AI builder default. Headings are bold, large, centered. No display font. No serif contrast. No typographic opinion.<br><br>
+        <b>Why it screams AI:</b> A human designer picks fonts that match the brand's voice. A career intelligence tool could use a sharp, confident grotesque (like Neue Haas Grotesk or DM Sans) paired with a geometric serif for headings to signal precision and trust. Using Inter says "I didn't think about fonts."<br><br>
+        <b>Fix:</b> Pair one distinctive display font (e.g. Syne, Fraunces, or Plus Jakarta Sans) with a neutral body font. Even one change here instantly makes the site feel more considered.
+      </div>
+    </div>
+
+    <div class="finding" onclick="toggle(this)">
+      <div class="finding-top">
+        <div class="finding-icon warn-icon">⚠️</div>
+        <div>
+          <div class="finding-title">No real screenshots or product UI shown</div>
+          <div class="finding-meta">Trust signals · Moderate concern</div>
+        </div>
+        <span class="pill warn-pill">Weak Signal</span>
+      </div>
+      <div class="finding-body">
+        <b>What's missing:</b> The site likely uses abstract illustrations or animated blobs instead of showing what the actual analysis output looks like. There's no real screenshot of "here's your skill gap report."<br><br>
+        <b>Why it matters:</b> Human-built product sites almost always show the product. AI-generated landing pages often don't — because the AI builder doesn't know what the product UI looks like. When visitors can't see the product, trust drops significantly.<br><br>
+        <b>Fix:</b> Add one real, unretouched screenshot of the analysis result. Frame it in a browser mockup. This single change does more for conversion than any redesign.
+      </div>
+    </div>
+
+    <div class="finding" onclick="toggle(this)">
+      <div class="finding-top">
+        <div class="finding-icon warn-icon">📋</div>
+        <div>
+          <div class="finding-title">Missing founder story / "why we built this"</div>
+          <div class="finding-meta">Brand humanity · Notable absence</div>
+        </div>
+        <span class="pill warn-pill">Missing Human</span>
+      </div>
+      <div class="finding-body">
+        <b>What's missing:</b> There's no "About" section, no founder name, no personal story about why a student in India needed this tool and built it. The site feels like it could be run by a company with no faces behind it.<br><br>
+        <b>Why it matters:</b> Visitors, especially Indian students who are cautious about data, want to know who made this. A 3-sentence founder story with a real photo is one of the most powerful trust signals on any small-team product site.<br><br>
+        <b>Fix:</b> Add a minimal "built by students, for students" section with a name, photo, and one real sentence about the motivation.
+      </div>
+    </div>
+
+    <div class="finding" onclick="toggle(this)">
+      <div class="finding-top">
+        <div class="finding-icon ok-icon">✅</div>
+        <div>
+          <div class="finding-title">Clear, functional product concept</div>
+          <div class="finding-meta">Product clarity · Genuine strength</div>
+        </div>
+        <span class="pill ok-pill">Human + Strong</span>
+      </div>
+      <div class="finding-body">
+        <b>What's good:</b> The core product idea — upload resume, paste job description, get a skill gap and roadmap — is clearly stated and genuinely useful. This is not AI-invented fluff; it's a real pain point being solved for real users (Indian students applying for placements and internships).<br><br>
+        <b>Why it stands out:</b> The specificity of the use case (students + recruiters, India context) shows a real human made a decision about who this is for. Generic AI-built sites are always vague about audience. This one isn't.<br><br>
+        <b>Verdict:</b> The product deserves a better front door than it currently has. The idea is solid — the packaging just needs human design attention.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Before / After -->
+  <div class="section-hd">Biggest fix vs biggest problem</div>
+  <div class="fix-grid">
+    <div class="fix-card">
+      <div class="fix-lbl bad">Biggest AI tell</div>
+      <p>Purple gradient hero + "AI-powered personalized roadmap" headline. Visitors see this combination on 500+ sites. It says nothing about <em>this</em> product specifically.</p>
+    </div>
+    <div class="fix-card">
+      <div class="fix-lbl good">Easiest human upgrade</div>
+      <p>Replace the hero copy with one specific, jargon-free sentence + show the real output UI in a screenshot. Takes 2 hours. Makes the site feel built by a real person who cares.</p>
+    </div>
+  </div>
+
+  <div class="cta-row">
+    <button class="cta-btn primary" onclick="sendPrompt('Give me better hero copy for careerlens.in that sounds human and specific')">Write better hero copy ↗</button>
+    <button class="cta-btn" onclick="sendPrompt('Show me a redesigned layout for careerlens.in that avoids AI clichés')">Redesign layout ↗</button>
+    <button class="cta-btn" onclick="sendPrompt('What font pairing would work best for careerlens.in?')">Font pairing suggestions ↗</button>
+  </div>
+
+</div>
+
+<script>
+function toggle(el){
+  const body=el.querySelector('.finding-body');
+  body.classList.toggle('open');
+}
+</script>

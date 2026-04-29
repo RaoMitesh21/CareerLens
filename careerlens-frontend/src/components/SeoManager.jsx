@@ -25,7 +25,7 @@ const SEO_CONFIG = {
   },
   '/signup': {
     title: 'Sign Up - CareerLens',
-    description: 'Create a CareerLens account to start AI-powered resume and skill-gap analysis.',
+    description: 'Create a CareerLens account to analyze your resume, find skill gaps, and get a learning roadmap.',
     allowIndex: true,
   },
 };
@@ -34,7 +34,7 @@ function getSeoForPath(pathname) {
   return SEO_CONFIG[pathname] || {
     title: `${SITE_NAME}`,
     description:
-      'CareerLens is an AI-powered platform for resume analysis, skill-gap insights, and career roadmaps.',
+      'CareerLens helps you analyze your resume, find skill gaps, and build a learning roadmap — for students and recruiters.',
     allowIndex: false,
   };
 }

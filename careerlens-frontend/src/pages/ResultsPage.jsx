@@ -370,7 +370,7 @@ export default function ResultsPage() {
                   { bg: 'bg-success/6', text: 'text-success', border: 'border-success/12', dot: 'bg-success' },
                   { bg: 'bg-warning/6', text: 'text-warning', border: 'border-warning/12', dot: 'bg-warning' },
                   { bg: 'bg-danger/6', text: 'text-danger', border: 'border-danger/12', dot: 'bg-danger' },
-                  { bg: 'bg-violet-500/6', text: 'text-violet-600', border: 'border-violet-500/12', dot: 'bg-violet-500' },
+                  { bg: 'bg-sky-500/6', text: 'text-sky-600', border: 'border-sky-500/12', dot: 'bg-sky-500' },
                   { bg: 'bg-cyan-500/6', text: 'text-cyan-600', border: 'border-cyan-500/12', dot: 'bg-cyan-500' },
                   { bg: 'bg-pink-500/6', text: 'text-pink-600', border: 'border-pink-500/12', dot: 'bg-pink-500' },
                 ];

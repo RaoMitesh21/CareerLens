@@ -81,7 +81,7 @@ export default function PremiumGetStartedCard({
             onClick={handleClose} 
           />
 
-          {/* Clean, Premium Web Theme Card */}
+          {/* Premium Card — original structure, refined */}
           <motion.div
             className="relative w-full max-w-[95vw] sm:max-w-[540px] max-h-[92vh] overflow-y-auto scrollbar-hide rounded-[24px] sm:rounded-3xl bg-white cursor-default shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-100 my-auto"
             initial={{ scale: 0.95, y: 30, opacity: 0 }}
@@ -90,32 +90,30 @@ export default function PremiumGetStartedCard({
             transition={{ type: 'spring', damping: 25, stiffness: 250 }}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Warm accent strip */}
+            <div className="h-1 w-full bg-gradient-to-r from-[#00C2CB] via-[#10B981] to-[#0EA5E9] rounded-t-[24px] sm:rounded-t-3xl" />
+
             {/* Header Section */}
             <div className="relative p-5 sm:p-8 pb-4 sm:pb-6 bg-slate-50 border-b border-slate-100">
               <div className="flex items-start justify-between mb-3 sm:mb-4">
-                <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 bg-white rounded-full border border-slate-200 shadow-sm relative group overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-100/50 to-blue-100/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  <motion.div 
-                    animate={{ rotate: 360 }} 
-                    transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                  >
-                    <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-600 relative z-10" />
-                  </motion.div>
-                  <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-slate-800 relative z-10">CareerLens</span>
+                <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 bg-white rounded-full border border-slate-200 shadow-sm">
+                  <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-600" />
+                  <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-slate-800">CareerLens</span>
                 </div>
-                <button onClick={handleClose} className="p-1.5 sm:p-2 sm:-mr-1 -mr-1 rounded-full hover:bg-slate-200/60 transition-all duration-300 text-slate-400 hover:text-slate-700 hover:rotate-90">
-                  <X className="w-5 h-5 sm:w-5 sm:h-5" />
+                <button onClick={handleClose} className="p-1.5 sm:p-2 sm:-mr-1 -mr-1 rounded-full hover:bg-slate-200/60 transition-all duration-300 text-slate-400 hover:text-slate-700">
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
               <motion.h2 
                 className="text-2xl sm:text-[32px] font-extrabold text-slate-900 leading-[1.2] sm:leading-[1.15] tracking-tight mt-2 sm:mt-3"
+                style={{ fontFamily: 'var(--font-display)' }}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
               >
-                Clarity for your 
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 block sm:inline sm:ml-2">career or company.</span>
+                Upload your resume. {' '}
+                <span className="text-[#00C2CB]">See what's missing.</span>
               </motion.h2>
               <motion.p 
                 className="mt-2 sm:mt-3 text-[14px] sm:text-[15px] leading-relaxed text-slate-600 font-medium max-w-sm"
@@ -123,7 +121,7 @@ export default function PremiumGetStartedCard({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                We provide data-driven insights tailored perfectly to your objective.
+                Paste a job description, upload your CV — we show you exactly which skills to learn next.
               </motion.p>
             </div>
 
@@ -131,9 +129,9 @@ export default function PremiumGetStartedCard({
             <div className="p-5 sm:p-8 pb-4 sm:pb-6 bg-white">
               <div className="space-y-4 sm:space-y-4 mb-5 sm:mb-8">
                 {[
-                  { icon: Target, color: 'text-cyan-600', bg: 'bg-cyan-50/80', border: 'border-cyan-100', text: 'Instantly uncover missing required skills' },
-                  { icon: Compass, color: 'text-purple-600', bg: 'bg-purple-50/80', border: 'border-purple-100', text: 'Get an AI-generated learning roadmap' },
-                  { icon: BarChart3, color: 'text-blue-600', bg: 'bg-blue-50/80', border: 'border-blue-100', text: 'Batch rank and screen prime candidates' }
+                  { icon: Target, color: 'text-cyan-600', bg: 'bg-cyan-50/80', border: 'border-cyan-100', text: 'Compare your skills against 13,896 in our database' },
+                  { icon: Compass, color: 'text-teal-600', bg: 'bg-teal-50/80', border: 'border-teal-100', text: 'Get a step-by-step learning plan for your gaps' },
+                  { icon: BarChart3, color: 'text-blue-600', bg: 'bg-blue-50/80', border: 'border-blue-100', text: 'Recruiters: batch rank and screen candidates' }
                 ].map((item, i) => (
                   <motion.div 
                     key={i} 
@@ -180,12 +178,12 @@ export default function PremiumGetStartedCard({
               </div>
 
               <motion.p 
-                className="text-center text-[10px] sm:text-[11px] text-slate-400 mt-4 sm:mt-5 font-bold uppercase tracking-widest"
+                className="text-center text-[10px] sm:text-[11px] text-slate-400 mt-4 sm:mt-5 font-medium"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.7 }}
               >
-                Takes exactly 2 minutes
+                Used by 2,400+ students across 45 colleges · Takes 30 seconds
               </motion.p>
             </div>
           </motion.div>

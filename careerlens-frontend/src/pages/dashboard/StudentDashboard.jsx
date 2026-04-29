@@ -1508,7 +1508,7 @@ const StudentDashboard = () => {
                         <ul className="space-y-1.5 text-sm text-gray-700">
                           {selectedMonth.resources.map((resource, i) => (
                             <li key={`${resource}-${i}`} className="flex items-start gap-2">
-                              <span className="text-violet-600 mt-1">•</span>
+                              <span className="text-teal-600 mt-1">•</span>
                               <span>{resource}</span>
                             </li>
                           ))}

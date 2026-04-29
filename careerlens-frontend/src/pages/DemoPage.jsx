@@ -506,26 +506,26 @@ export default function DemoPage() {
 
               {/* Web Development */}
               <motion.div
-                className="group relative overflow-hidden rounded-2xl p-6 border-2 transition-all hover:border-violet-500/50"
-                style={{ background: 'rgba(139, 92, 246, 0.08)', borderColor: 'rgba(139, 92, 246, 0.25)' }}
+                className="group relative overflow-hidden rounded-2xl p-6 border-2 transition-all hover:border-sky-500/50"
+                style={{ background: 'rgba(14, 165, 233, 0.08)', borderColor: 'rgba(14, 165, 233, 0.25)' }}
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.5 }}
               >
-                <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-20" style={{ background: 'rgba(139, 92, 246, 0.4)' }} />
+                <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-20" style={{ background: 'rgba(14, 165, 233, 0.4)' }} />
                 <div className="relative">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#8B5CF6' }}>
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'rgba(14, 165, 233, 0.15)', color: '#0EA5E9' }}>
                       ◐
                     </div>
                     <div>
-                      <h4 className="font-semibold text-ink" style={{ color: '#8B5CF6' }}>Web Development</h4>
+                      <h4 className="font-semibold text-ink" style={{ color: '#0EA5E9' }}>Web Development</h4>
                       <span className="text-xs text-ink-muted">Advanced</span>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {candidate.skills['Web Development'].map((skill, i) => (
-                      <span key={i} className="px-3 py-1 rounded-lg text-xs font-medium" style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#8B5CF6', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+                      <span key={i} className="px-3 py-1 rounded-lg text-xs font-medium" style={{ background: 'rgba(14, 165, 233, 0.15)', color: '#0EA5E9', border: '1px solid rgba(14, 165, 233, 0.3)' }}>
                         {skill}
                       </span>
                     ))}
@@ -634,7 +634,7 @@ export default function DemoPage() {
                   <div className="text-xs text-ink-muted uppercase tracking-wider mt-1">Categories</div>
                 </div>
                 <div className="text-center p-4 rounded-xl bg-surface/50">
-                  <div className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-display)', color: '#8B5CF6' }}>Expert</div>
+                  <div className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-display)', color: '#00C2CB' }}>Expert</div>
                   <div className="text-xs text-ink-muted uppercase tracking-wider mt-1">Level</div>
                 </div>
               </div>

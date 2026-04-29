@@ -1506,7 +1506,7 @@ const RecruiterDashboard = () => {
         <div className="text-center py-14">
           <Download className="mx-auto text-slate-300" size={40} />
           <h3 className="mt-3 text-xl font-bold text-slate-800">No report data yet</h3>
-          <p className="text-sm text-slate-500 mt-1">Run candidate analysis to unlock export and reporting tools.</p>
+          <p className="text-sm text-slate-500 mt-1">Run candidate analysis to access export and reporting tools.</p>
         </div>
       );
     }
@@ -2011,7 +2011,7 @@ const RecruiterDashboard = () => {
                       <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Other Skills (Tools/Frameworks)</p>
                       <div className="flex flex-wrap gap-2">
                         {(selectedCandidateDetails?.other.matched || []).slice(0, 6).map((skill, i) => (
-                          <span key={`other-m-${i}`} className="text-xs font-semibold bg-violet-50 text-violet-700 border border-violet-200 px-2.5 py-1 rounded-lg">
+                          <span key={`other-m-${i}`} className="text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200 px-2.5 py-1 rounded-lg">
                             {skill}
                           </span>
                         ))}

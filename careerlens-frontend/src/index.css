@@ -46,8 +46,8 @@
   --color-ink-muted: #8E99A4;
 
   /* ── Fonts ──────────────────────────────────────── */
-  --font-display: "General Sans", "Cabinet Grotesk", system-ui, sans-serif;
-  --font-body: "Sora", "Inter", system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
 
   /* ── Spacing ────────────────────────────────────── */
   --spacing-section: 6rem;

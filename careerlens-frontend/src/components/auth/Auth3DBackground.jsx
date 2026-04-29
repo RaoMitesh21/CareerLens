@@ -55,7 +55,7 @@ export default function Auth3DBackground({ children }) {
           transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
         />
 
-        {/* Soft Violet/Blue blob — bottom left */}
+        {/* Soft Teal blob — bottom left */}
         <motion.div
           className="absolute rounded-full"
           style={{
@@ -64,7 +64,7 @@ export default function Auth3DBackground({ children }) {
             bottom: '-15%',
             left: '-10%',
             background:
-              'radial-gradient(circle, rgba(139,92,246,0.12) 0%, rgba(99,102,241,0.05) 40%, transparent 70%)',
+              'radial-gradient(circle, rgba(16,185,129,0.12) 0%, rgba(6,182,212,0.05) 40%, transparent 70%)',
             filter: 'blur(70px)',
           }}
           animate={{

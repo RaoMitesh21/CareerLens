@@ -24,7 +24,7 @@ const taglines = [
   'Close the gap between\nyou and your dream job.',
   'Reveal. Refine.\nRecruited.',
   'Outsmart\nthe screening process.',
-  'Data-driven\ncareer clarity.',
+  'Career clarity\nin 30 seconds.',
   "View your profile\nthrough a recruiter's lens.",
   'Bring your hidden\nweaknesses into focus.',
   'The clarity you need\nto get hired.',
@@ -56,9 +56,9 @@ function AnimatedNum({ value, suffix = '' }) {
 const features = [
   {
     step: '01',
-    title: 'Precision Match Engine',
+    title: 'Resume vs. Job Match',
     description:
-      'CareerLens AI Engine-powered 3-tier scoring classifies skills as Core, Secondary, and Bonus — then calculates calibrated match scores with confidence weighting.',
+      'Paste a job description, upload your resume — we compare them line by line. You get a match score and a breakdown of Core, Secondary, and Bonus skills.',
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" />
@@ -69,22 +69,22 @@ const features = [
   },
   {
     step: '02',
-    title: 'Skill Gap Intelligence',
+    title: "What You're Missing",
     description:
-      "See exactly which skills you have and which you're missing — ranked by priority with confidence scores based on keyword frequency and context.",
+      "A ranked list of skills the job needs that aren't on your resume — sorted by how much they matter, so you know what to learn first.",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
       </svg>
     ),
-    gradient: 'from-violet-500/10 to-fuchsia-500/10',
-    accent: '#8B5CF6',
+    gradient: 'from-sky-500/10 to-blue-500/10',
+    accent: '#0EA5E9',
   },
   {
     step: '03',
-    title: 'Smart Roadmap System',
+    title: 'Your Learning Plan',
     description:
-      'Get a personalised learning roadmap — beginner to advanced — with phased skill targets, durations, and concrete actions to close your gaps.',
+      'A step-by-step roadmap from beginner to job-ready — with phases, timelines, and specific things to build or study. No vague advice.',
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" />
@@ -152,17 +152,17 @@ export default function LandingPage() {
     <div className="min-h-screen">
       {/* ── Background ───────────────────────────────────────────── */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
-        {/* Cyan blob — top right */}
-        <div className="absolute rounded-full md:blur-3xl opacity-25"
+        {/* Teal blob — top right */}
+        <div className="absolute rounded-full md:blur-3xl opacity-20"
           style={{
             width: 'clamp(300px, 80vw, 800px)', height: 'clamp(300px, 80vw, 800px)', top: '-15%', right: '-10%',
-            background: 'radial-gradient(circle, rgba(0,194,203,0.25) 0%, rgba(14,165,233,0.08) 40%, transparent 70%)'
+            background: 'radial-gradient(circle, rgba(0,194,203,0.22) 0%, rgba(16,185,129,0.08) 40%, transparent 70%)'
           }} />
-        {/* Violet blob — left */}
-        <div className="absolute rounded-full md:blur-3xl opacity-15"
+        {/* Warm amber blob — left */}
+        <div className="absolute rounded-full md:blur-3xl opacity-12"
           style={{
             width: 'clamp(200px, 60vw, 600px)', height: 'clamp(200px, 60vw, 600px)', top: '35%', left: '-12%',
-            background: 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, rgba(59,130,246,0.05) 50%, transparent 70%)'
+            background: 'radial-gradient(circle, rgba(245,158,11,0.10) 0%, rgba(16,185,129,0.05) 50%, transparent 70%)'
           }} />
         {/* Warm blob — bottom right */}
         <div className="absolute rounded-full md:blur-3xl opacity-10"
@@ -207,7 +207,7 @@ export default function LandingPage() {
                 transition={{ duration: 0.5 }}
               >
                 <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide uppercase border" style={{
-                  background: 'linear-gradient(135deg, rgba(0,194,203,0.08) 0%, rgba(139,92,246,0.06) 100%)',
+                  background: 'linear-gradient(135deg, rgba(0,194,203,0.08) 0%, rgba(16,185,129,0.06) 100%)',
                   borderColor: 'rgba(0,194,203,0.18)',
                   color: '#00C2CB',
                 }}>
@@ -215,14 +215,14 @@ export default function LandingPage() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
                   </span>
-                  AI-Powered Skill Analysis
+                  Built for Students & Recruiters in India
                 </span>
               </motion.div>
 
               {/* Headline — rotating taglines */}
               <div className="relative" style={{ minHeight: 'clamp(3.5rem, 10vw, 9.5rem)' }}>
                 {/* Radial glow behind headline */}
-                <div className="absolute -inset-10 rounded-full md:blur-3xl opacity-30 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, rgba(0,194,203,0.2) 0%, rgba(139,92,246,0.08) 50%, transparent 70%)' }} />
+                <div className="absolute -inset-10 rounded-full md:blur-3xl opacity-30 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, rgba(0,194,203,0.2) 0%, rgba(16,185,129,0.08) 50%, transparent 70%)' }} />
                 <AnimatePresence mode="wait">
                   <motion.h1
                     key={tagIdx}
@@ -240,7 +240,7 @@ export default function LandingPage() {
                     <span className="text-ink">{line1}</span>
                     <br />
                     <span style={{
-                      background: 'linear-gradient(135deg, #00C2CB 0%, #3B82F6 50%, #8B5CF6 100%)',
+                      background: 'linear-gradient(135deg, #00C2CB 0%, #10B981 100%)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
                     }}>{line2}</span>
@@ -252,7 +252,7 @@ export default function LandingPage() {
                   <motion.div
                     key={tagIdx}
                     className="h-full rounded-full"
-                    style={{ background: 'linear-gradient(90deg, #00C2CB, #8B5CF6)' }}
+                    style={{ background: 'linear-gradient(90deg, #00C2CB, #10B981)' }}
                     initial={{ width: '0%' }}
                     animate={{ width: '100%' }}
                     transition={{ duration: TAGLINE_DURATION / 1000, ease: 'linear' }}
@@ -267,9 +267,9 @@ export default function LandingPage() {
                 transition={{ delay: 0.3, duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
                 className="text-ink-secondary text-base sm:text-lg max-w-md leading-relaxed"
               >
-                Upload your resume. Pick a role. Get an instant, data-driven
-                breakdown of what you have, what you're missing, and how to
-                close the gap.
+                Upload your resume, paste a job description — we'll tell you
+                exactly what skills you're missing and how to learn them.
+                Takes under 30 seconds.
               </motion.p>
 
               {/* CTAs */}
@@ -285,7 +285,7 @@ export default function LandingPage() {
                     <polyline points="17 8 12 3 7 8" />
                     <line x1="12" y1="3" x2="12" y2="15" />
                   </svg>
-                  Get Started
+                  Analyse My Resume
                 </Link>
                 <Link to="/signin" className="btn-secondary group">
                   <span className="flex items-center gap-2">
@@ -345,7 +345,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
           >
             <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-muted">
-              Powered by CareerLens AI Engine
+              How it's built
             </span>
             <div className="flex items-center flex-wrap justify-center gap-4 sm:gap-6 md:gap-8 text-ink-muted/40">
               {['CareerLens Intelligence Engine', 'FastAPI', 'React', 'MySQL', 'Python'].map((t, i) => (
@@ -376,63 +376,131 @@ export default function LandingPage() {
             </span>
             <h2 className="text-ink mt-3 tracking-tight"
               style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(1.75rem, 3vw, 2.5rem)' }}>
-              Three engines.{' '}
+              What actually happens{' '}
               <span style={{
-                background: 'linear-gradient(135deg, #00C2CB, #8B5CF6)',
+                background: 'linear-gradient(135deg, #00C2CB, #10B981)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              }}>One clear picture.</span>
+              }}>when you upload.</span>
             </h2>
             <p className="text-ink-secondary mt-3 max-w-lg mx-auto">
-              Upload once. Our pipeline matches, analyzes, and plans your path — in seconds.
+              No black boxes. Upload your resume, paste a job description — here's exactly what we do with it.
             </p>
           </motion.div>
 
-          {/* Feature Cards — enhanced with step numbers + accent colors */}
-          <div className="grid md:grid-cols-3 gap-6">
-            {features.map((feature, i) => (
-              <motion.div
-                key={i}
-                className="glass-card p-5 sm:p-6 lg:p-8 flex flex-col gap-4 relative overflow-hidden group"
-                initial={{ y: 40, opacity: 0 }}
-                whileInView={{ y: 0, opacity: 1 }}
-                whileHover={{ y: -8, scale: 1.02 }}
-                viewport={{ once: true, margin: '-50px' }}
-                transition={{ delay: i * 0.15, duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-              >
-                {/* Step number — large faded background */}
-                <span className="absolute top-4 right-5 text-6xl font-black opacity-[0.04] select-none"
-                  style={{ fontFamily: 'var(--font-display)', color: feature.accent }}>
-                  {feature.step}
-                </span>
+          {/* Feature Cards — asymmetric: 1 large + 2 small */}
+          <div className="flex flex-col gap-6">
+            {/* Featured Card — Resume vs. Job Match (large) */}
+            <motion.div
+              className="glass-card p-6 sm:p-8 lg:p-10 relative overflow-hidden group"
+              initial={{ y: 40, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              whileHover={{ y: -6, scale: 1.01 }}
+              viewport={{ once: true, margin: '-50px' }}
+              transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+            >
+              {/* Step number — large faded background */}
+              <span className="absolute top-4 right-5 text-8xl font-black opacity-[0.04] select-none"
+                style={{ fontFamily: 'var(--font-display)', color: features[0].accent }}>
+                {features[0].step}
+              </span>
 
-                {/* Top accent line */}
-                <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{ background: `linear-gradient(90deg, ${feature.accent}, transparent)` }} />
+              {/* Top accent line */}
+              <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{ background: `linear-gradient(90deg, ${features[0].accent}, transparent)` }} />
 
-                {/* Icon with gradient ring */}
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center relative"
-                  style={{ background: `${feature.accent}10`, color: feature.accent }}>
-                  <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-400" style={{ boxShadow: `inset 0 0 12px ${feature.accent}20, 0 0 20px ${feature.accent}10` }} />
-                  {feature.icon}
+              <div className="grid md:grid-cols-2 gap-6 items-center">
+                <div className="flex flex-col gap-4">
+                  {/* Icon */}
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center relative"
+                    style={{ background: `${features[0].accent}10`, color: features[0].accent }}>
+                    <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-400" style={{ boxShadow: `inset 0 0 12px ${features[0].accent}20, 0 0 20px ${features[0].accent}10` }} />
+                    {features[0].icon}
+                  </div>
+
+                  {/* Step label */}
+                  <span className="text-[0.65rem] font-bold uppercase tracking-[0.15em]" style={{ color: features[0].accent }}>
+                    Step {features[0].step}
+                  </span>
+
+                  {/* Title */}
+                  <h3 className="text-xl sm:text-2xl text-ink tracking-tight"
+                    style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+                    {features[0].title}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="text-base text-ink-secondary leading-relaxed max-w-md">
+                    {features[0].description}
+                  </p>
                 </div>
 
-                {/* Step label */}
-                <span className="text-[0.65rem] font-bold uppercase tracking-[0.15em]" style={{ color: feature.accent }}>
-                  Step {feature.step}
-                </span>
+                {/* Mini visual — match score preview */}
+                <div className="hidden md:flex items-center justify-center">
+                  <div className="relative p-6 rounded-2xl" style={{ background: 'rgba(0,194,203,0.04)', border: '1px solid rgba(0,194,203,0.1)' }}>
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="text-5xl font-extrabold" style={{ fontFamily: 'var(--font-display)', color: '#00C2CB' }}>87%</div>
+                      <div className="text-xs uppercase tracking-[0.15em] text-ink-muted font-semibold">Match Score</div>
+                      <div className="flex gap-2 mt-2">
+                        {['Core', 'Secondary', 'Bonus'].map((label, idx) => (
+                          <span key={label} className="px-2.5 py-1 text-[0.6rem] font-bold rounded-full" style={{
+                            background: idx === 0 ? 'rgba(0,194,203,0.1)' : idx === 1 ? 'rgba(14,165,233,0.1)' : 'rgba(16,185,129,0.1)',
+                            color: idx === 0 ? '#00A8B0' : idx === 1 ? '#0284C7' : '#059669',
+                          }}>{label}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
 
-                {/* Title */}
-                <h3 className="text-lg text-ink tracking-tight"
-                  style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-                  {feature.title}
-                </h3>
+            {/* Two smaller cards side by side */}
+            <div className="grid md:grid-cols-2 gap-6">
+              {features.slice(1).map((feature, i) => (
+                <motion.div
+                  key={i}
+                  className="glass-card p-5 sm:p-6 lg:p-8 flex flex-col gap-4 relative overflow-hidden group"
+                  initial={{ y: 40, opacity: 0 }}
+                  whileInView={{ y: 0, opacity: 1 }}
+                  whileHover={{ y: -8, scale: 1.02 }}
+                  viewport={{ once: true, margin: '-50px' }}
+                  transition={{ delay: (i + 1) * 0.15, duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+                >
+                  {/* Step number — large faded background */}
+                  <span className="absolute top-4 right-5 text-6xl font-black opacity-[0.04] select-none"
+                    style={{ fontFamily: 'var(--font-display)', color: feature.accent }}>
+                    {feature.step}
+                  </span>
 
-                {/* Description */}
-                <p className="text-sm text-ink-secondary leading-relaxed">
-                  {feature.description}
-                </p>
-              </motion.div>
-            ))}
+                  {/* Top accent line */}
+                  <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    style={{ background: `linear-gradient(90deg, ${feature.accent}, transparent)` }} />
+
+                  {/* Icon */}
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center relative"
+                    style={{ background: `${feature.accent}10`, color: feature.accent }}>
+                    <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-400" style={{ boxShadow: `inset 0 0 12px ${feature.accent}20, 0 0 20px ${feature.accent}10` }} />
+                    {feature.icon}
+                  </div>
+
+                  {/* Step label */}
+                  <span className="text-[0.65rem] font-bold uppercase tracking-[0.15em]" style={{ color: feature.accent }}>
+                    Step {feature.step}
+                  </span>
+
+                  {/* Title */}
+                  <h3 className="text-lg text-ink tracking-tight"
+                    style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                    {feature.title}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="text-sm text-ink-secondary leading-relaxed">
+                    {feature.description}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -457,14 +525,14 @@ export default function LandingPage() {
             </span>
             <h2 className="text-ink mt-3 tracking-tight"
               style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(1.75rem, 3vw, 2.5rem)' }}>
-              Accelerate Your Career{' '}
+              What students{' '}
               <span style={{
                 background: 'linear-gradient(135deg, #10B981, #06B6D4)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              }}>Growth.</span>
+              }}>actually get.</span>
             </h2>
             <p className="text-ink-secondary mt-3 max-w-lg mx-auto">
-              Understand your strengths, identify skill gaps, and follow a personalized roadmap to land your dream role.
+              Every feature exists because a real student asked for it during placement season.
             </p>
           </motion.div>
 
@@ -473,33 +541,33 @@ export default function LandingPage() {
             {[
               {
                 icon: '✦',
-                title: 'Match Your Target Role',
-                description: 'See exactly how your skills align with the precise requirements of your target position. Understand your readiness level instantly.'
+                title: 'See Your Fit Score',
+                description: 'Upload your resume and a job description — instantly see how well your skills match, broken down by Core, Secondary, and Bonus.'
               },
               {
                 icon: '◈',
-                title: 'Identify Critical Gaps',
-                description: 'Discover which skills employers demand that you\'re currently missing. Prioritize your learning based on job market demand.'
+                title: 'Know What\'s Missing',
+                description: 'A ranked list of skills the job wants that you don\'t have yet. Sorted by importance so you know where to focus first.'
               },
               {
                 icon: '↗',
-                title: 'Follow Your Growth Path',
-                description: 'Get a structured, phased roadmap with concrete milestones. Progress from foundational skills to advanced expertise.'
+                title: 'Get a Learning Plan',
+                description: 'A phased roadmap from beginner to job-ready — with specific courses, projects, and timelines. Not generic advice.'
               },
               {
                 icon: '◷',
-                title: 'Save Time & Money',
-                description: 'Focus your learning efforts strategically. Avoid expensive courses that don\'t match your actual needs.'
+                title: 'Stop Wasting Time',
+                description: 'No more random courses. See exactly which skills have the highest demand for your target role and learn only those.'
               },
               {
                 icon: '⊙',
-                title: 'Gain Confidence',
-                description: 'Enter interviews knowing exactly where you stand. Speak confidently about your strengths and planned improvements.'
+                title: 'Walk Into Interviews Ready',
+                description: 'Know your strengths and gaps before the interviewer does. Speak about your skills with actual data behind you.'
               },
               {
                 icon: '▲',
-                title: 'Accelerate Success',
-                description: 'With a data-driven plan, you\'re 3x more likely to land interviews and receive competitive offers.'
+                title: 'Track Real Progress',
+                description: 'Re-upload your resume as you learn. Watch your fit score climb. Know exactly when you\'re ready to apply.'
               }
             ].map((benefit, i) => (
               <motion.div
@@ -552,14 +620,14 @@ export default function LandingPage() {
             </span>
             <h2 className="text-ink mt-3 tracking-tight"
               style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(1.75rem, 3vw, 2.5rem)' }}>
-              Streamline Hiring &{' '}
+              Hire based on{' '}
               <span style={{
                 background: 'linear-gradient(135deg, #F97316, #DC2626)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              }}>Find Better Talent.</span>
+              }}>skills, not guesswork.</span>
             </h2>
             <p className="text-ink-secondary mt-3 max-w-lg mx-auto">
-              Evaluate candidates faster with objective skill matching. Reduce screening time by 70% and focus on top prospects.
+              Upload a batch of resumes against one job description. We rank every candidate by actual skill match — no manual screening.
             </p>
           </motion.div>
 
@@ -568,33 +636,33 @@ export default function LandingPage() {
             {[
               {
                 icon: '⚡',
-                title: 'Batch Skill Analysis',
-                description: 'Upload multiple resumes at once and get instant skill matching reports for all candidates. Evaluate dozens in minutes.'
+                title: 'Upload All Resumes at Once',
+                description: 'Drop 50 resumes and one job description. Get a ranked list of who actually matches — in under 2 minutes.'
               },
               {
                 icon: '≡',
-                title: 'Objective Scoring',
-                description: 'Eliminate bias with data-driven skill assessments. See which candidates truly match your requirements.'
+                title: 'Skills-Based Ranking',
+                description: 'Every candidate scored against 13,896 skills. No bias, no gut feeling — just data on who fits the role.'
               },
               {
                 icon: '◉',
-                title: 'Deep Skill Insights',
-                description: 'Understand not just what skills candidates claim to have, but their proficiency level across 13,896 tracked competencies.'
+                title: 'See the Gaps, Not Just the Score',
+                description: 'For every candidate, see exactly which required skills they have and which they\'re missing. Makes interviews focused.'
               },
               {
                 icon: '◫',
-                title: 'Better Candidate Match',
-                description: 'Find candidates who not only have the required skills but also match your career progression and development needs.'
+                title: 'Core vs. Bonus Skills',
+                description: 'We separate must-have skills from nice-to-have. So you don\'t reject someone great over a skill they can learn in a week.'
               },
               {
                 icon: '📈',
-                title: 'Reduce Hiring Time',
-                description: 'Cut screening time dramatically. Focus your human evaluation on qualified candidates, not gatekeeping applications.'
+                title: 'Skip the Resume Reading',
+                description: 'Stop spending 3 hours reading 80 resumes. Our ranking puts the most qualified candidates at the top automatically.'
               },
               {
                 icon: '✓',
-                title: 'Improve Retention',
-                description: 'Hire talent that\'s genuinely prepared for the role. Workers matched on skills show 40% higher retention rates.'
+                title: 'Export and Share Reports',
+                description: 'Download candidate comparison reports. Share them with your hiring panel so everyone sees the same data.'
               }
             ].map((benefit, i) => (
               <motion.div
@@ -627,6 +695,62 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Why We Built This ─ Founder Story ──────────────────────── */}
+      <section className="relative py-16 sm:py-20 lg:py-24 border-t border-surface-alt" style={{ zIndex: 1 }}>
+        <div className="section-container">
+          <motion.div
+            className="grid lg:grid-cols-[1fr_1.4fr] gap-8 lg:gap-14 items-center"
+            initial={{ y: 30, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            {/* Left — Photo + Name */}
+            <div className="flex flex-col items-center text-center">
+              <img 
+                src="/builder.png" 
+                alt="Mitesh Rao — Builder of CareerLens" 
+                className="w-36 h-36 sm:w-44 sm:h-44 rounded-2xl object-cover shadow-md"
+                style={{ border: '2px solid rgba(0,194,203,0.15)' }}
+              />
+              <p className="text-lg font-bold mt-4" style={{ fontFamily: 'var(--font-display)', color: '#232B32' }}>Mitesh Rao</p>
+              <p className="text-sm" style={{ color: '#8E99A4' }}>Ahmedabad, India</p>
+              <p className="text-xs mt-1" style={{ color: '#8E99A4' }}>Second-year Data Science Student · Builder</p>
+            </div>
+
+            {/* Right — Story */}
+            <div className="flex flex-col gap-4">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest w-fit" style={{
+                background: 'rgba(0,194,203,0.06)',
+                color: '#00C2CB',
+                border: '1px solid rgba(0,194,203,0.12)',
+              }}>
+                ✦ The Story
+              </span>
+              <h2 className="tracking-tight" style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(1.5rem, 2.5vw, 2rem)', color: '#232B32' }}>
+                Why I built this
+              </h2>
+              <p className="leading-relaxed text-[15px] sm:text-base" style={{ color: '#4A545E' }}>
+                During placement season, I watched friends apply to 40–50 companies and hear nothing back.
+                Not because they weren't good enough — but because they had no way to know what was <em>actually</em> missing from their resume for each role.
+              </p>
+              <p className="leading-relaxed text-[15px] sm:text-base" style={{ color: '#4A545E' }}>
+                I started mapping job descriptions to skill databases manually. Then I thought — why not build
+                a tool that does this comparison automatically? That's how CareerLens started: a capstone project
+                that turned into something students at 45+ colleges now use before every application.
+              </p>
+              <div className="flex items-center gap-3 pt-2">
+                <div className="h-px flex-1" style={{ background: '#E2E8F0' }} />
+                <p className="text-xs italic shrink-0" style={{ color: '#8E99A4' }}>
+                  Built by a student who needed this tool himself.
+                </p>
+                <div className="h-px flex-1" style={{ background: '#E2E8F0' }} />
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* ── Contact Us Section — Two Column Layout ────────────────── */}
       <section id="contact" className="relative py-16 sm:py-20 lg:py-24 border-t border-surface-alt" style={{ zIndex: 1, scrollMarginTop: '80px' }}>
         <div className="section-container">
@@ -648,9 +772,9 @@ export default function LandingPage() {
               {/* Header */}
               <div>
                 <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest mb-4" style={{
-                  background: 'rgba(139, 92, 246, 0.06)',
-                  color: '#8B5CF6',
-                  border: '1px solid rgba(139, 92, 246, 0.12)',
+                  background: 'rgba(0, 194, 203, 0.06)',
+                  color: '#00A8B0',
+                  border: '1px solid rgba(0, 194, 203, 0.12)',
                 }}>
                   ✦ Let's Connect
                 </span>
@@ -658,7 +782,7 @@ export default function LandingPage() {
                   style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(1.75rem, 3vw, 2.5rem)' }}>
                   Have a Question?{' '}
                   <span style={{
-                    background: 'linear-gradient(135deg, #8B5CF6, #00C2CB)',
+                    background: 'linear-gradient(135deg, #00C2CB, #10B981)',
                     WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                   }}>We're Here to Help.</span>
                 </h2>
@@ -673,7 +797,7 @@ export default function LandingPage() {
                   {
                     icon: '▭',
                     q: 'How does the skill analysis work?',
-                    a: 'Our AI analyzes your resume against 13,896 skills using our proprietary intelligence engine to provide precise, data-driven insights.'
+                    a: 'We compare your resume against 13,896 skills from our database, matching them line by line to the job description you provide.'
                   },
                   {
                     icon: '◬',
@@ -693,7 +817,7 @@ export default function LandingPage() {
                 ].map((item, i) => (
                   <motion.div
                     key={i}
-                    className="glass-card p-5 rounded-xl hover:border-violet-500/30 transition-all group"
+                    className="glass-card p-5 rounded-xl hover:border-cyan-500/30 transition-all group"
                     initial={{ y: 20, opacity: 0 }}
                     whileInView={{ y: 0, opacity: 1 }}
                     viewport={{ once: true, margin: '-50px' }}
@@ -959,7 +1083,7 @@ export default function LandingPage() {
             <div className="absolute rounded-full md:blur-3xl opacity-25"
               style={{ width: 350, height: 350, top: '-20%', right: '-5%', background: 'radial-gradient(circle, #00C2CB 0%, transparent 70%)' }} />
             <div className="absolute rounded-full md:blur-3xl opacity-15"
-              style={{ width: 250, height: 250, bottom: '-15%', left: '10%', background: 'radial-gradient(circle, #8B5CF6 0%, transparent 70%)' }} />
+              style={{ width: 250, height: 250, bottom: '-15%', left: '10%', background: 'radial-gradient(circle, #10B981 0%, transparent 70%)' }} />
 
             <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">
               Ready to start?
@@ -977,7 +1101,7 @@ export default function LandingPage() {
               <Link to="/signup"
                 className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-base font-semibold text-[#232B32] transition-all hover:-translate-y-1 no-underline w-full sm:w-auto justify-center"
                 style={{ background: '#00C2CB', boxShadow: '0 6px 24px rgba(0,194,203,0.4), 0 0 40px rgba(0,194,203,0.15)' }}>
-                Get Started Free
+                Analyse My Resume
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="9 18 15 12 9 6" />
                 </svg>
@@ -1008,13 +1132,13 @@ export default function LandingPage() {
           <defs>
             <linearGradient id="waveGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="rgba(0,194,203,0.12)" />
-              <stop offset="50%" stopColor="rgba(139,92,246,0.08)" />
+              <stop offset="50%" stopColor="rgba(16,185,129,0.08)" />
               <stop offset="100%" stopColor="rgba(59,130,246,0.1)" />
             </linearGradient>
             <linearGradient id="waveGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="rgba(59,130,246,0.08)" />
               <stop offset="50%" stopColor="rgba(0,194,203,0.1)" />
-              <stop offset="100%" stopColor="rgba(139,92,246,0.06)" />
+              <stop offset="100%" stopColor="rgba(16,185,129,0.06)" />
             </linearGradient>
           </defs>
           {/* Wave layer 1 — slowest, back */}
@@ -1055,7 +1179,7 @@ export default function LandingPage() {
           />
           <motion.div
             className="absolute w-[350px] h-[350px] rounded-full"
-            style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.05) 0%, transparent 70%)', bottom: '-15%', right: '-5%' }}
+            style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.05) 0%, transparent 70%)', bottom: '-15%', right: '-5%' }}
             animate={{ x: [0, -30, 0], y: [0, -25, 0], scale: [1, 1.1, 1] }}
             transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
           />
@@ -1087,7 +1211,7 @@ export default function LandingPage() {
                 <Logo size="md" />
               </div>
               <p className="text-sm leading-relaxed max-w-[260px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                AI-powered skill analysis empowering students and recruiters with data-driven career clarity.
+                Know your skill gaps before recruiters do. Built for students and recruiters in India.
               </p>
               {/* Social Icons */}
               <div className="flex items-center gap-2.5">
@@ -1132,7 +1256,7 @@ export default function LandingPage() {
               {
                 title: 'Platform',
                 links: [
-                  { label: 'Get Started', href: '/signup' },
+                  { label: 'Analyse My Resume', href: '/signup' },
                   { label: 'Sign In', href: '/signin' },
                   { label: 'Demo', href: '/demo' },
                 ],
@@ -1190,7 +1314,7 @@ export default function LandingPage() {
                         className="text-sm flex items-center gap-2"
                         style={{ color: 'rgba(255,255,255,0.45)' }}
                       >
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'rgba(139,92,246,0.5)' }} />
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'rgba(0,194,203,0.5)' }} />
                         {link.label}
                       </span>
                     )
@@ -1269,7 +1393,7 @@ export default function LandingPage() {
                     disabled={nlLoading}
                     className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap"
                     style={{
-                      background: nlLoading ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #00C2CB 0%, #3B82F6 100%)',
+                      background: nlLoading ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #00C2CB 0%, #10B981 100%)',
                       boxShadow: nlLoading ? 'none' : '0 4px 15px rgba(0,194,203,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
                       opacity: nlLoading ? 0.7 : 1,
                     }}
@@ -1306,8 +1430,8 @@ export default function LandingPage() {
       <div className="noise-overlay" />
 
       {/* Premium Get Started Card - appears after 20 seconds */}
-      <PremiumGetStartedCard 
-        delaySeconds={20} 
+      <PremiumGetStartedCard
+        delaySeconds={20}
         navigateTo="/signup"
         variant="default"
       />

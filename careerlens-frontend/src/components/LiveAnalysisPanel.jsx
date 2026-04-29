@@ -64,7 +64,7 @@ function ScoreRing({ score = 87, size = 180, animate = false }) {
           <linearGradient id="sr-grad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#06b6d4" />
             <stop offset="55%" stopColor="#3b82f6" />
-            <stop offset="100%" stopColor="#8b5cf6" />
+            <stop offset="100%" stopColor="#10b981" />
           </linearGradient>
           <filter id="sr-glow">
             <feGaussianBlur stdDeviation="3.5" result="b" />
@@ -193,7 +193,7 @@ export default function LiveAnalysisPanel() {
   const stats = useMemo(() => [
     { l: 'CGPA', v: '8.83', bg: 'rgba(6,182,212,0.1)', c: '#0891b2' },
     { l: 'Rank', v: '1st', bg: 'rgba(16,185,129,0.1)', c: '#059669' },
-    { l: 'Status', v: 'Top Performer', bg: 'rgba(139,92,246,0.1)', c: '#7c3aed' },
+    { l: 'Status', v: 'Top Performer', bg: 'rgba(0,194,203,0.1)', c: '#00A8B0' },
   ], []);
 
   const suggestions = ['Learn MLOps', 'Add Deep Learning projects', 'Improve deployment skills'];
@@ -315,7 +315,7 @@ export default function LiveAnalysisPanel() {
             <p className="text-[0.55rem] uppercase tracking-[0.14em] text-slate-400 font-bold mb-1.5">Suggestions</p>
             {suggestions.map(s => (
               <p key={s} className="text-[0.72rem] text-slate-600 flex items-center gap-1.5 py-0.5">
-                <span className="w-1 h-1 rounded-full bg-violet-500 shrink-0" />
+                <span className="w-1 h-1 rounded-full bg-teal-500 shrink-0" />
                 {s}
               </p>
             ))}
@@ -363,7 +363,7 @@ export default function LiveAnalysisPanel() {
                 <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: 'rgba(148,163,184,0.12)' }}>
                   <motion.div
                     className="h-full rounded-full"
-                    style={{ background: 'linear-gradient(90deg, #06b6d4, #8b5cf6)' }}
+                    style={{ background: 'linear-gradient(90deg, #06b6d4, #10b981)' }}
                     initial={{ width: '0%' }}
                     animate={{ width: phase >= 2 ? '100%' : '5%' }}
                     transition={phase >= 2 ? { duration: 10, ease: 'linear' } : { duration: 0.5 }}

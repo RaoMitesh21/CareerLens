@@ -153,7 +153,7 @@ export default function Navbar() {
         <div className="hidden md:block">
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Link to="/signup" className="btn-primary !py-2 !px-5 !text-sm">
-              Get Started
+              Analyse My Resume
             </Link>
           </motion.div>
         </div>
@@ -242,7 +242,7 @@ export default function Navbar() {
                 transition={{ delay: 0.2 }}
               >
                 <Link to="/signup" className="btn-primary w-full text-center !py-2.5 block">
-                  Get Started
+                  Analyse My Resume
                 </Link>
               </motion.div>
             </div>
