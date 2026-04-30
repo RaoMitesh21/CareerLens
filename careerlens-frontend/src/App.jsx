@@ -12,6 +12,7 @@ import ResetPasswordScreen from './pages/auth/ResetPasswordScreen';
 // Dashboard Pages
 import StudentDashboard from './pages/dashboard/StudentDashboard';
 import RecruiterDashboard from './pages/dashboard/RecruiterDashboard';
+import LegacyDashboardAccessGate from './pages/dashboard/LegacyDashboardAccessGate';
 
 // Legacy Pages
 import Navbar from './components/Navbar';
@@ -164,6 +165,16 @@ function AppRoutes() {
             <RecruiterDashboard />
           </ProtectedRoute>
         }
+      />
+
+      {/* Legacy Cypress compatibility routes */}
+      <Route
+        path="/dashboard/student"
+        element={<LegacyDashboardAccessGate role="student" />}
+      />
+      <Route
+        path="/dashboard/recruiter"
+        element={<LegacyDashboardAccessGate role="recruiter" />}
       />
 
       {/* ═══════════════════════════════════════════════════════════════

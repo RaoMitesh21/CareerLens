@@ -118,7 +118,7 @@ const LoginScreen = () => {
                 WebkitTextFillColor: 'transparent',
               }}
             >
-              Welcome Back
+              Welcome back
             </h1>
             <p className="text-slate-500 font-medium text-sm">Sign in to your CareerLens account</p>
           </motion.div>

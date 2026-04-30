@@ -73,7 +73,7 @@ const RoleSelectionScreen = () => {
             transition={{ delay: 0.3 }}
             className="text-slate-500 font-medium text-lg"
           >
-            Choose your path to begin
+            Join CareerLens and choose your path to begin
           </motion.p>
         </div>
 
