@@ -1767,8 +1767,29 @@ const RecruiterDashboard = () => {
     <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-50 via-white to-slate-100">
       <Sidebar />
 
-      {/* Mobile Menu Button */}
-      <motion.div
+      {/* Mobile Hamburger Button */}
+      <button
+        type="button"
+        onClick={() => setSidebarOpen((prev) => !prev)}
+        className="fixed left-4 top-4 z-[70] inline-flex h-11 w-11 items-center justify-center rounded-full border border-cyan-200 bg-white/95 text-cyan-700 shadow-[0_8px_30px_rgba(6,182,212,0.18)] backdrop-blur-md md:hidden"
+        aria-label={sidebarOpen ? 'Close navigation' : 'Open navigation'}
+      >
+        {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+      </button>
+
+      {/* Mobile Backdrop Overlay */}
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-[90] bg-slate-900/40 backdrop-blur-[1px] md:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Close navigation overlay"
+        />
+      )}
+
+      {/* Main Content */}
+      <div className="relative z-0 min-h-screen p-4 pt-20 pb-28 sm:p-6 sm:pt-6 sm:pb-8 md:ml-64 lg:p-8">
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
@@ -2105,6 +2126,7 @@ const RecruiterDashboard = () => {
           </motion.div>
         </div>
       </div>
+    </div>
   );
 };
 
