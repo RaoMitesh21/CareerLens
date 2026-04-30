@@ -728,21 +728,27 @@ export default function LandingPage() {
                 ✦ The Story
               </span>
               <h2 className="tracking-tight" style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(1.5rem, 2.5vw, 2rem)', color: '#232B32' }}>
-                Why I built this
+                It started with a question no one could answer.
               </h2>
               <p className="leading-relaxed text-[15px] sm:text-base" style={{ color: '#4A545E' }}>
-                During placement season, I watched friends apply to 40–50 companies and hear nothing back.
-                Not because they weren't good enough — but because they had no way to know what was <em>actually</em> missing from their resume for each role.
+                During placement season, I watched friends apply to 40–50 companies and hear nothing back. They weren't untalented — they just had no way to know what was <em>actually</em> missing from their resume.
               </p>
               <p className="leading-relaxed text-[15px] sm:text-base" style={{ color: '#4A545E' }}>
-                I started mapping job descriptions to skill databases manually. Then I thought — why not build
-                a tool that does this comparison automatically? That's how CareerLens started: a capstone project
-                that turned into something students at 45+ colleges now use before every application.
+                So I did it manually. I sat with job descriptions, compared them skill by skill against resumes, and highlighted the gaps. It worked — but it took hours for one person.
+              </p>
+              <p className="leading-relaxed text-[15px] sm:text-base" style={{ color: '#4A545E' }}>
+                That's when the idea hit: <em>what if a tool could do this instantly — for every student, for every job?</em>
+              </p>
+              <p className="leading-relaxed text-[15px] sm:text-base" style={{ color: '#4A545E' }}>
+                I started building. What began as a capstone project became something bigger — a product that's now growing into a startup.
+              </p>
+              <p className="leading-relaxed text-[15px] sm:text-base font-medium" style={{ color: '#232B32' }}>
+                Today, CareerLens isn't just a project on my resume. It's becoming a startup — because every student deserves to know exactly where they stand before they hit "Apply."
               </p>
               <div className="flex items-center gap-3 pt-2">
                 <div className="h-px flex-1" style={{ background: '#E2E8F0' }} />
                 <p className="text-xs italic shrink-0" style={{ color: '#8E99A4' }}>
-                  Built by a student who needed this tool himself.
+                  From an idea to a startup — this is just the beginning.
                 </p>
                 <div className="h-px flex-1" style={{ background: '#E2E8F0' }} />
               </div>
