@@ -1,0 +1,9 @@
+/* TEAM */
+Developer: Mitesh Rao
+Site: https://www.careerlens.in
+Location: India
+
+/* SITE */
+Standards: HTML5, CSS3, ES2024
+Stack: React, Vite, FastAPI, Turso
+Fonts: Plus Jakarta Sans, DM Sans (Google Fonts)
